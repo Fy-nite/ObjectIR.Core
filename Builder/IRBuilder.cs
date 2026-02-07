@@ -388,5 +388,14 @@ public sealed class InstructionBuilder
         return this;
     }
 
+    public InstructionBuilder Foreach(string itemName, string collectionName, Action<InstructionBuilder> body)
+    {
+        var foreachInst = new ForEachInstruction(itemName, collectionName);
+        var bodyBuilder = new InstructionBuilder(_methodBuilder, foreachInst.Body);
+        body(bodyBuilder);
+        _instructions.Add(foreachInst);
+        return this;
+    }
+
     public MethodBuilder EndBody() => _methodBuilder;
 }

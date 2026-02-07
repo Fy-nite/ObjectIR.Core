@@ -1704,6 +1704,12 @@ Name = property.Name,
                     return $"while {cond} {{ body:{bodyCount} }}";
                 }
                 break;
+            case OpCode.For:
+                if (instruction is ForEachInstruction fe)
+                {
+                    return $"foreach ({fe.ItemName} in {fe.CollectionName}) {{ body:{fe.Body.Count} }}";
+                }
+                break;
 
             case OpCode.Br:
                 // Branch instructions would need target labels
@@ -1722,22 +1728,34 @@ Name = property.Name,
 
     private string FormatCondition(Condition condition)
     {
-        return condition switch
+        switch (condition)
         {
-            StackCondition => "stack",
-            BinaryCondition bc => bc.Operation switch
-            {
-                ComparisonOp.Equal => "==",
-                ComparisonOp.NotEqual => "!=",
-                ComparisonOp.Less => "<",
-                ComparisonOp.LessOrEqual => "<=",
-                ComparisonOp.Greater => ">",
-                ComparisonOp.GreaterOrEqual => ">=",
-                _ => bc.Operation.ToString()
-            },
-            ExpressionCondition => "expression",
-            _ => condition.ToString()
-        };
+            case StackCondition:
+                return "stack";
+            case BinaryCondition bc:
+                return bc.Operation switch
+                {
+                    ComparisonOp.Equal => "==",
+                    ComparisonOp.NotEqual => "!=",
+                    ComparisonOp.Less => "<",
+                    ComparisonOp.LessOrEqual => "<=",
+                    ComparisonOp.Greater => ">",
+                    ComparisonOp.GreaterOrEqual => ">=",
+                    _ => bc.Operation.ToString()
+                };
+            case ExpressionCondition:
+                return "expression";
+            case LogicalCondition lc:
+                return lc.Operation switch
+                {
+                    LogicalOp.And => $"({FormatCondition(lc.Left)} and {FormatCondition(lc.Right!)})",
+                    LogicalOp.Or => $"({FormatCondition(lc.Left)} or {FormatCondition(lc.Right!)})",
+                    LogicalOp.Not => $"(not {FormatCondition(lc.Left)})",
+                    _ => lc.ToString()
+                };
+            default:
+                return condition.ToString();
+        }
     }
 
     // Dump an instruction possibly as multiple lines (handles nested while/if bodies)
@@ -1856,6 +1874,17 @@ Name = property.Name,
                 DumpInstructionBlock(sb, inner, indentLevel + 1);
             }
             sb.AppendLine(ind + "}");
+            return;
+        }
+
+        if (instruction is ForEachInstruction fe)
+        {
+            sb.AppendLine($"{ind}foreach ({fe.ItemName} in {fe.CollectionName}) {{");
+            foreach (var inner in fe.Body)
+            {
+                DumpInstructionBlock(sb, inner, indentLevel + 1);
+            }
+            sb.AppendLine($"{ind}}}");
             return;
         }
 

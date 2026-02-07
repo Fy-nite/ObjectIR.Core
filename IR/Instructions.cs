@@ -143,9 +143,29 @@ public sealed class ArithmeticInstruction : Instruction
 {
     public ArithmeticOp Operation { get; set; }
 
-    public ArithmeticInstruction(ArithmeticOp operation) : base(OpCode.Add)
+    public ArithmeticInstruction(ArithmeticOp operation) : base(GetOpCode(operation))
     {
         Operation = operation;
+    }
+
+    private static OpCode GetOpCode(ArithmeticOp op)
+    {
+        return op switch
+        {
+            ArithmeticOp.Add => OpCode.Add,
+            ArithmeticOp.Sub => OpCode.Sub,
+            ArithmeticOp.Mul => OpCode.Mul,
+            ArithmeticOp.Div => OpCode.Div,
+            ArithmeticOp.Rem => OpCode.Rem,
+            ArithmeticOp.Neg => OpCode.Neg,
+            ArithmeticOp.And => OpCode.And,
+            ArithmeticOp.Or => OpCode.Or,
+            ArithmeticOp.Xor => OpCode.Xor,
+            ArithmeticOp.Not => OpCode.Not,
+            ArithmeticOp.Shl => OpCode.Shl,
+            ArithmeticOp.Shr => OpCode.Shr,
+            _ => OpCode.Add,
+        };
     }
 
     public override void Accept(IInstructionVisitor visitor) => visitor.Visit(this);

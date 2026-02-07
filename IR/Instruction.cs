@@ -54,6 +54,7 @@ public interface IInstructionVisitor
     void Visit(StoreElementInstruction instruction);
     void Visit(UnaryNegateInstruction instruction);
     void Visit(UnaryNotInstruction instruction);
+    void Visit(ForEachInstruction instruction);
 }
 
 /// <summary>
