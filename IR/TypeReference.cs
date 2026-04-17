@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+
 namespace ObjectIR.Core.IR;
 
 /// <summary>
@@ -93,8 +96,13 @@ public sealed class TypeReference
         if (parts.Length == 1)
             return new TypeReference(parts[0]);
         
+        #if NET47
+        var name = parts[parts.Length - 1];
+        var ns = string.Join(".", parts.Take(parts.Length - 1));
+        #else
         var name = parts[^1];
         var ns = string.Join(".", parts[..^1]);
+        #endif
         return new TypeReference(name, ns);
     }
 }

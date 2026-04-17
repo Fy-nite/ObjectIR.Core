@@ -1,5 +1,6 @@
 namespace ObjectIR.Core.Builder;
 
+using System;
 using ObjectIR.Core.IR;
 
 /// <summary>

@@ -10,6 +10,8 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.IO;
+using System;
 
 #pragma warning disable CS1591
 
@@ -433,7 +435,7 @@ Name = property.Name,
     {
         var classDef = new ClassDefinition(typeData.Name);
         classDef.Namespace = typeData.Namespace;
-        classDef.Access = Enum.Parse<AccessModifier>(typeData.Access);
+        classDef.Access = (AccessModifier)Enum.Parse(typeof(AccessModifier), typeData.Access);
         classDef.IsAbstract = typeData.IsAbstract;
         classDef.IsSealed = typeData.IsSealed;
         if (typeData.BaseType != null)
@@ -449,7 +451,7 @@ Name = property.Name,
         foreach (var fieldData in typeData.Fields)
         {
             var field = classDef.DefineField(fieldData.Name, TypeReference.FromName(fieldData.Type));
-            field.Access = Enum.Parse<AccessModifier>(fieldData.Access);
+            field.Access = (AccessModifier)Enum.Parse(typeof(AccessModifier), fieldData.Access);
             field.IsStatic = fieldData.IsStatic;
             field.IsReadOnly = fieldData.IsReadOnly;
             if (fieldData.InitialValue != null)
@@ -462,7 +464,7 @@ Name = property.Name,
         foreach (var propData in typeData.Properties)
         {
             var prop = new PropertyDefinition(propData.Name, TypeReference.FromName(propData.Type));
-            prop.Access = Enum.Parse<AccessModifier>(propData.Access);
+            prop.Access = (AccessModifier)Enum.Parse(typeof(AccessModifier), propData.Access);
             classDef.Properties.Add(prop);
         }
 
@@ -480,7 +482,7 @@ Name = property.Name,
     {
         var interfaceDef = new InterfaceDefinition(typeData.Name);
         interfaceDef.Namespace = typeData.Namespace;
-        interfaceDef.Access = Enum.Parse<AccessModifier>(typeData.Access);
+        interfaceDef.Access = (AccessModifier)Enum.Parse(typeof(AccessModifier), typeData.Access);
 
         foreach (var iface in typeData.BaseInterfaces)
         {
@@ -491,7 +493,7 @@ Name = property.Name,
         foreach (var propData in typeData.Properties)
         {
             var prop = new PropertyDefinition(propData.Name, TypeReference.FromName(propData.Type));
-            prop.Access = Enum.Parse<AccessModifier>(propData.Access);
+            prop.Access = (AccessModifier)Enum.Parse(typeof(AccessModifier), propData.Access);
             interfaceDef.Properties.Add(prop);
         }
 
@@ -509,7 +511,7 @@ Name = property.Name,
     {
         var structDef = new StructDefinition(typeData.Name);
         structDef.Namespace = typeData.Namespace;
-        structDef.Access = Enum.Parse<AccessModifier>(typeData.Access);
+        structDef.Access = (AccessModifier)Enum.Parse(typeof(AccessModifier), typeData.Access);
 
         foreach (var iface in typeData.Interfaces)
         {
@@ -520,7 +522,7 @@ Name = property.Name,
         foreach (var fieldData in typeData.Fields)
         {
             var field = structDef.DefineField(fieldData.Name, TypeReference.FromName(fieldData.Type));
-            field.Access = Enum.Parse<AccessModifier>(fieldData.Access);
+            field.Access = (AccessModifier)Enum.Parse(typeof(AccessModifier), fieldData.Access);
             field.IsStatic = fieldData.IsStatic;
             field.IsReadOnly = fieldData.IsReadOnly;
             if (fieldData.InitialValue != null)
@@ -543,7 +545,7 @@ Name = property.Name,
     {
         var enumDef = new EnumDefinition(typeData.Name);
         enumDef.Namespace = typeData.Namespace;
-        enumDef.Access = Enum.Parse<AccessModifier>(typeData.Access);
+        enumDef.Access = (AccessModifier)Enum.Parse(typeof(AccessModifier), typeData.Access);
         enumDef.UnderlyingType = TypeReference.FromName(typeData.UnderlyingType ?? "int32");
         // Note: Members are not serialized
         return enumDef;
@@ -581,7 +583,7 @@ Name = property.Name,
 
     private static void LoadMethodData(MethodDefinition method, MethodData methodData)
     {
-        method.Access = Enum.Parse<AccessModifier>(methodData.Access);
+        method.Access = (AccessModifier)Enum.Parse(typeof(AccessModifier), methodData.Access);
         method.IsStatic = methodData.IsStatic;
         method.IsVirtual = methodData.IsVirtual;
         method.IsOverride = methodData.IsOverride;
@@ -681,10 +683,10 @@ Name = property.Name,
             Console.WriteLine($"DEBUG: EntryPoint metadata: {entryString}");
             // Parse entry point in format "ClassName.MethodName"
             int dotIndex = entryString.LastIndexOf('.');
-            if (dotIndex > 0)
-            {
-                string className = entryString[..dotIndex];
-                string methodName = entryString[(dotIndex + 1)..];
+                if (dotIndex > 0)
+                {
+                    string className = entryString.Substring(0, dotIndex);
+                    string methodName = entryString.Substring(dotIndex + 1);
                 Console.WriteLine($"DEBUG: Looking for class '{className}', method '{methodName}'");
 
                 // Find type index

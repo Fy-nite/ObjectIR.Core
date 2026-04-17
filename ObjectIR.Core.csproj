@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net8.0;net47</TargetFrameworks>
     <LangVersion>latest</LangVersion>
 
-	  <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings Condition="'$(TargetFramework)' == 'net8.0'">enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>ObjectIR.Core</PackageId>
     <Version>0.1.0</Version>
@@ -13,10 +13,18 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net47'">
+    <DefineConstants>NET47;$(DefineConstants)</DefineConstants>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="MongoDB.Bson" Version="2.25.0" />
     <PackageReference Include="JsonSchema.Net" Version="7.0.3" />
 	  <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Compatibility\Net47Shims.cs" Condition="'$(TargetFramework)' != 'net47'" />
   </ItemGroup>
 
 </Project>

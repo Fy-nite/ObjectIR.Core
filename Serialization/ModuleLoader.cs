@@ -5,6 +5,8 @@ using ObjectIR.Core.Builder;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System;
+using System.IO;
 
 /// <summary>
 /// Loads ObjectIR modules from text format and provides storage/caching capabilities
@@ -183,7 +185,7 @@ public sealed class ModuleLoader
     /// </summary>
     public IReadOnlyDictionary<string, Module> GetAllCachedModules()
     {
-        return _moduleCache.AsReadOnly();
+        return new System.Collections.ObjectModel.ReadOnlyDictionary<string, Module>(_moduleCache);
     }
 
     /// <summary>

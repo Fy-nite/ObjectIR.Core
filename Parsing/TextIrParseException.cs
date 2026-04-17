@@ -1,3 +1,5 @@
+using System;
+
 namespace ObjectIR.AST;
 
 public sealed class TextIrParseException : Exception

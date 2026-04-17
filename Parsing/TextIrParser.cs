@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Text;
 
 namespace ObjectIR.AST;
@@ -52,14 +54,14 @@ public static class TextIrParser
             throw new TextIrParseException("Expected input to start with 'call'.");
         }
 
-        span = span[5..].Trim();
+        span = span.Slice(5).Trim();
         return ParseCallCore(span, isVirtual: false);
     }
 
     private static (string Name, string? Version) ParseModuleHeader(string line)
     {
-        var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 2 || !parts[0].Equals("module", StringComparison.OrdinalIgnoreCase))
+        var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2 || !parts[0].Equals("module", StringComparison.OrdinalIgnoreCase))
         {
             throw new TextIrParseException("Expected module header like 'module Name version X'.");
         }
@@ -69,7 +71,11 @@ public static class TextIrParser
         var versionIndex = Array.IndexOf(parts, "version");
         if (versionIndex >= 0 && versionIndex + 1 < parts.Length)
         {
-            version = string.Join(' ', parts[(versionIndex + 1)..]);
+                #if NET47
+                version = string.Join(" ", parts.Skip(versionIndex + 1));
+                #else
+                version = string.Join(" ", parts[(versionIndex + 1)..]);
+                #endif
         }
 
         return (name, version);
@@ -78,7 +84,11 @@ public static class TextIrParser
     private static InterfaceNode ParseInterface(TokenReader reader)
     {
         var line = reader.ReadLine();
-        var name = line["interface ".Length..].Trim();
+            #if NET47
+            var name = line.Substring("interface ".Length).Trim();
+            #else
+            var name = line["interface ".Length..].Trim();
+            #endif
         if (name.Length == 0)
         {
             throw new TextIrParseException("Interface name is missing.");
@@ -100,18 +110,31 @@ public static class TextIrParser
     private static ClassNode ParseClass(TokenReader reader)
     {
         var line = reader.ReadLine();
-        var declaration = line["class ".Length..].Trim();
+            #if NET47
+            var declaration = line.Substring("class ".Length).Trim();
+            #else
+            var declaration = line["class ".Length..].Trim();
+            #endif
         if (declaration.Length == 0)
         {
             throw new TextIrParseException("Class name is missing.");
         }
 
         var baseTypes = new List<string>();
+    #if NET47
+        var __tmp_parts = declaration.Split(new[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
+        var parts = __tmp_parts.Select(p => p.Trim()).ToArray();
+    #else
         var parts = declaration.Split(':', 2, StringSplitOptions.TrimEntries);
+    #endif
         var name = parts[0].Trim();
         if (parts.Length > 1)
         {
+#if NET47
+            baseTypes.AddRange(parts[1].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim()));
+#else
             baseTypes.AddRange(parts[1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+#endif
         }
 
         reader.Expect("{");
@@ -162,31 +185,36 @@ public static class TextIrParser
         if (remaining.StartsWith("private ", StringComparison.OrdinalIgnoreCase))
         {
             access = AccessModifier.Private;
-            remaining = remaining["private ".Length..];
+            remaining = remaining.Substring("private ".Length);
         }
         else if (remaining.StartsWith("public ", StringComparison.OrdinalIgnoreCase))
         {
             access = AccessModifier.Public;
-            remaining = remaining["public ".Length..];
+            remaining = remaining.Substring("public ".Length);
         }
         else if (remaining.StartsWith("protected ", StringComparison.OrdinalIgnoreCase))
         {
             access = AccessModifier.Protected;
-            remaining = remaining["protected ".Length..];
+            remaining = remaining.Substring("protected ".Length);
         }
         else if (remaining.StartsWith("internal ", StringComparison.OrdinalIgnoreCase))
         {
             access = AccessModifier.Internal;
-            remaining = remaining["internal ".Length..];
+            remaining = remaining.Substring("internal ".Length);
         }
 
         remaining = remaining.Trim();
         if (remaining.StartsWith("field ", StringComparison.OrdinalIgnoreCase))
         {
-            remaining = remaining["field ".Length..];
+            remaining = remaining.Substring("field ".Length);
         }
 
+    #if NET47
+        var __tmp_parts2 = remaining.Split(new[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
+        var parts = __tmp_parts2.Select(p => p.Trim()).ToArray();
+    #else
         var parts = remaining.Split(':', 2, StringSplitOptions.TrimEntries);
+    #endif
         if (parts.Length != 2)
         {
             throw new TextIrParseException("Invalid field declaration.");
@@ -217,7 +245,13 @@ public static class TextIrParser
             throw new TextIrParseException("Expected method signature.");
         }
 
-        var (name, parameters, returnType, implements) = ParseMethodParts(signature["method ".Length..]);
+        var (name, parameters, returnType, implements) = ParseMethodParts(
+    #if NET47
+            signature.Substring("method ".Length)
+    #else
+            signature["method ".Length..]
+    #endif
+        );
         return new MethodSignature(name, parameters, returnType, isStatic, implements);
     }
 
@@ -229,7 +263,13 @@ public static class TextIrParser
             throw new TextIrParseException("Expected method declaration.");
         }
 
-        var (name, parameters, returnType, implements) = ParseMethodParts(signature["method ".Length..]);
+        var (name, parameters, returnType, implements) = ParseMethodParts(
+    #if NET47
+            signature.Substring("method ".Length)
+    #else
+            signature["method ".Length..]
+    #endif
+        );
         var body = ParseBlock(reader);
         return new MethodNode(name, parameters, returnType, isStatic, implements, body);
     }
@@ -238,7 +278,11 @@ public static class TextIrParser
     {
         if (line.StartsWith("static method ", StringComparison.OrdinalIgnoreCase))
         {
+            #if NET47
+            return (true, line.Substring("static ".Length));
+            #else
             return (true, line["static ".Length..]);
+            #endif
         }
 
         return (false, line);
@@ -250,8 +294,13 @@ public static class TextIrParser
         string? implements = null;
         if (implementsIndex >= 0)
         {
+    #if NET47
+            implements = line.Substring(implementsIndex + " implements ".Length).Trim();
+            line = line.Substring(0, implementsIndex).Trim();
+    #else
             implements = line[(implementsIndex + " implements ".Length)..].Trim();
             line = line[..implementsIndex].Trim();
+    #endif
         }
 
         var arrowIndex = line.IndexOf("->", StringComparison.Ordinal);
@@ -260,8 +309,13 @@ public static class TextIrParser
             throw new TextIrParseException("Expected '->' in method signature.");
         }
 
+        #if NET47
+        var left = line.Substring(0, arrowIndex).Trim();
+        var returnType = line.Substring(arrowIndex + 2).Trim();
+        #else
         var left = line[..arrowIndex].Trim();
         var returnType = line[(arrowIndex + 2)..].Trim();
+        #endif
         if (returnType.Length == 0)
         {
             throw new TextIrParseException("Missing return type.");
@@ -274,8 +328,13 @@ public static class TextIrParser
             throw new TextIrParseException("Expected parameters in parentheses.");
         }
 
-        var name = left[..openParenIndex].Trim();
-        var parametersSpan = left[(openParenIndex + 1)..closeParenIndex];
+            #if NET47
+            var name = left.Substring(0, openParenIndex).Trim();
+            var parametersSpan = left.Substring(openParenIndex + 1, closeParenIndex - (openParenIndex + 1));
+            #else
+            var name = left[..openParenIndex].Trim();
+            var parametersSpan = left[(openParenIndex + 1)..closeParenIndex];
+            #endif
         var parameters = ParseParameters(parametersSpan);
 
         return (name, parameters, new TypeRef(returnType), implements);
@@ -284,7 +343,11 @@ public static class TextIrParser
     private static IReadOnlyList<ParameterNode> ParseParametersFromSignature(string keyword, string line)
     {
         var start = keyword.Length;
+        #if NET47
+        var signature = line.Substring(start).Trim();
+        #else
         var signature = line[start..].Trim();
+        #endif
         var openParenIndex = signature.IndexOf('(');
         var closeParenIndex = signature.LastIndexOf(')');
         if (openParenIndex < 0 || closeParenIndex < openParenIndex)
@@ -292,7 +355,11 @@ public static class TextIrParser
             throw new TextIrParseException("Expected parameters in parentheses.");
         }
 
+        #if NET47
+        var parametersSpan = signature.Substring(openParenIndex + 1, closeParenIndex - (openParenIndex + 1));
+        #else
         var parametersSpan = signature[(openParenIndex + 1)..closeParenIndex];
+        #endif
         return ParseParameters(parametersSpan);
     }
 
@@ -331,7 +398,12 @@ public static class TextIrParser
 
     private static LocalDeclarationStatement ParseLocal(string line)
     {
+    #if NET47
+        var __tmp_parts3 = line.Substring("local ".Length).Split(new[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
+        var parts = __tmp_parts3.Select(p => p.Trim()).ToArray();
+    #else
         var parts = line["local ".Length..].Split(':', 2, StringSplitOptions.TrimEntries);
+    #endif
         if (parts.Length != 2)
         {
             throw new TextIrParseException("Invalid local declaration.");
@@ -365,7 +437,11 @@ public static class TextIrParser
     private static string ExtractCondition(string line, string keyword)
     {
         var start = keyword.Length;
+        #if NET47
+        var trimmed = line.Substring(start).Trim();
+        #else
         var trimmed = line[start..].Trim();
+        #endif
         var openParenIndex = trimmed.IndexOf('(');
         var closeParenIndex = trimmed.LastIndexOf(')');
         if (openParenIndex < 0 || closeParenIndex < openParenIndex)
@@ -373,27 +449,31 @@ public static class TextIrParser
             throw new TextIrParseException($"Expected condition in parentheses for '{keyword}'.");
         }
 
+    #if NET47
+        return trimmed.Substring(openParenIndex + 1, closeParenIndex - (openParenIndex + 1)).Trim();
+    #else
         return trimmed[(openParenIndex + 1)..closeParenIndex].Trim();
+    #endif
     }
 
     private static Instruction ParseInstruction(string line)
     {
         if (line.StartsWith("callvirt ", StringComparison.OrdinalIgnoreCase))
         {
-            return ParseCallCore(line["callvirt ".Length..].AsSpan().Trim(), isVirtual: true);
+            return ParseCallCore(line.Substring("callvirt ".Length).AsSpan().Trim(), isVirtual: true);
         }
 
         if (line.StartsWith("call ", StringComparison.OrdinalIgnoreCase))
         {
-            return ParseCallCore(line["call ".Length..].AsSpan().Trim(), isVirtual: false);
+            return ParseCallCore(line.Substring("call ".Length).AsSpan().Trim(), isVirtual: false);
         }
 
         if (line.StartsWith("newobj ", StringComparison.OrdinalIgnoreCase))
         {
-            return ParseNewObj(line["newobj ".Length..].Trim());
+            return ParseNewObj(line.Substring("newobj ".Length).Trim());
         }
 
-        var parts = line.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+        var parts = line.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
         var opcode = parts[0];
         var operand = parts.Length > 1 ? parts[1].Trim() : null;
         return new SimpleInstruction(opcode, operand);
@@ -407,8 +487,8 @@ public static class TextIrParser
             throw new TextIrParseException("Expected '->' before return type.");
         }
 
-        var left = span[..arrowIndex].Trim();
-        var right = span[(arrowIndex + 2)..].Trim();
+        var left = span.Slice(0, arrowIndex).Trim();
+        var right = span.Slice(arrowIndex + 2).Trim();
         if (right.IsEmpty)
         {
             throw new TextIrParseException("Return type is missing.");
@@ -429,8 +509,8 @@ public static class TextIrParser
             return new NewObjInstruction(new TypeRef(span.ToString()), null, Array.Empty<TypeRef>());
         }
 
-        var typeName = span[..ctorIndex].Trim();
-        var ctorSpan = span[(ctorIndex + 1)..].Trim();
+        var typeName = span.Slice(0, ctorIndex).Trim();
+        var ctorSpan = span.Slice(ctorIndex + 1).Trim();
         if (!ctorSpan.StartsWith("constructor", StringComparison.OrdinalIgnoreCase))
         {
             throw new TextIrParseException("Invalid constructor reference.");
@@ -443,7 +523,7 @@ public static class TextIrParser
             throw new TextIrParseException("Expected constructor arguments.");
         }
 
-        var argsSpan = ctorSpan[(openParenIndex + 1)..closeParenIndex];
+        var argsSpan = ctorSpan.Slice(openParenIndex + 1, closeParenIndex - (openParenIndex + 1));
         var args = ParseTypeList(argsSpan);
         var method = new MethodRef(new TypeRef(typeName.ToString()), "constructor");
         return new NewObjInstruction(new TypeRef(typeName.ToString()), method, args);
@@ -458,8 +538,8 @@ public static class TextIrParser
             throw new TextIrParseException("Expected argument list in parentheses.");
         }
 
-        var targetSpan = text[..openParenIndex].Trim();
-        var argsSpan = text[(openParenIndex + 1)..closeParenIndex];
+        var targetSpan = text.Slice(0, openParenIndex).Trim();
+        var argsSpan = text.Slice(openParenIndex + 1, closeParenIndex - (openParenIndex + 1));
 
         if (targetSpan.IsEmpty)
         {
@@ -472,8 +552,8 @@ public static class TextIrParser
             throw new TextIrParseException("Target must be qualified as Type.Method.");
         }
 
-        var typeName = targetSpan[..lastDot].Trim();
-        var methodName = targetSpan[(lastDot + 1)..].Trim();
+        var typeName = targetSpan.Slice(0, lastDot).Trim();
+        var methodName = targetSpan.Slice(lastDot + 1).Trim();
 
         if (typeName.IsEmpty || methodName.IsEmpty)
         {
@@ -525,7 +605,12 @@ public static class TextIrParser
                 throw new TextIrParseException("Empty parameter.");
             }
 
+#if NET47
+            var __tmp_parts4 = trimmed.Split(new[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
+            var parts = __tmp_parts4.Select(p => p.Trim()).ToArray();
+#else
             var parts = trimmed.Split(':', 2, StringSplitOptions.TrimEntries);
+#endif
             if (parts.Length != 2)
             {
                 throw new TextIrParseException("Invalid parameter format.");
@@ -618,7 +703,7 @@ public static class TextIrParser
     private static string StripComment(string line)
     {
         var commentIndex = line.IndexOf("//", StringComparison.Ordinal);
-        return commentIndex >= 0 ? line[..commentIndex] : line;
+        return commentIndex >= 0 ? line.Substring(0, commentIndex) : line;
     }
 
     private sealed class TokenReader

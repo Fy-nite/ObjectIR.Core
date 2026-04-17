@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace ObjectIR.FobCompiler;
 
 /// <summary>

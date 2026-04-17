@@ -229,7 +229,7 @@ public class ConstructLexer
             _column++;
         }
 
-        string text = _source[start.._position];
+        string text = _source.Substring(start, _position - start);
 
         TokenType type = text switch
         {
@@ -263,7 +263,7 @@ public class ConstructLexer
             _column++;
         }
 
-        string text = _source[start.._position];
+        string text = _source.Substring(start, _position - start);
         AddToken(TokenType.Number, text);
     }
 
@@ -290,7 +290,7 @@ public class ConstructLexer
         if (_position >= _source.Length)
             throw new CompileException($"Unterminated string at line {_line}");
 
-        string text = _source[start.._position];
+        string text = _source.Substring(start, _position - start);
         _position++; // Skip closing quote
         _column++;
 
