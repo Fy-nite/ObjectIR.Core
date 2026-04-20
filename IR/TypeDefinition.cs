@@ -44,6 +44,8 @@ public sealed class ClassDefinition : TypeDefinition
     public List<PropertyDefinition> Properties { get; } = new();
     public bool IsAbstract { get; set; }
     public bool IsSealed { get; set; }
+    public bool IsStatic { get; set; }
+    public bool isPrivateProtected => Access == AccessModifier.Private && IsAbstract && !IsSealed;
 
     public override TypeKind Kind => TypeKind.Class;
 

@@ -27,4 +27,8 @@
     <Compile Remove="Compatibility\Net47Shims.cs" Condition="'$(TargetFramework)' != 'net47'" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Natives\" />
+  </ItemGroup>
+
 </Project>
