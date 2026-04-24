@@ -37,7 +37,7 @@ public abstract class TypeDefinition
 /// </summary>
 public sealed class ClassDefinition : TypeDefinition
 {
-    public List<TypeDefinition> NestedTypes;
+    public List<TypeDefinition> NestedTypes { get; } = new();
 
     public TypeReference? BaseType { get; set; }
     public List<TypeReference> Interfaces { get; } = new();
@@ -47,7 +47,7 @@ public sealed class ClassDefinition : TypeDefinition
     public bool IsAbstract { get; set; }
     public bool IsSealed { get; set; }
     public bool IsStatic { get; set; }
-    public bool isPrivateProtected => Access == AccessModifier.Private && IsAbstract && !IsSealed;
+    public bool IsPrivateProtected => Access == AccessModifier.Private && IsAbstract && !IsSealed;
 
     public override TypeKind Kind => TypeKind.Class;
 

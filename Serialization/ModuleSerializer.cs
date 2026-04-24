@@ -1625,10 +1625,10 @@ Name = property.Name,
             case OpCode.If:
                 if (instruction is IfInstruction ifInst)
                 {
-                    var cond = FormatCondition(ifInst.Condition);
-                    var thenCount = ifInst.ThenBlock.Count;
-                    var elseCount = ifInst.ElseBlock?.Count ?? 0;
-                    return $"if {cond} {{ then:{thenCount} else:{elseCount} }}";
+                    // Render a compact if with nested bodies
+                    var sbIf = new StringBuilder();
+                    DumpInstructionBlock(sbIf, ifInst, 0);
+                    return sbIf.ToString().TrimEnd();
                 }
                 break;
 
@@ -1656,9 +1656,32 @@ Name = property.Name,
             case OpCode.Newobj:
                 if (instruction is NewObjectInstruction newObj)
                 {
-                    // For constructors, we need to find the constructor method
-                    // This is simplified - in practice you'd need to look up the constructor
-                    return $"newobj {newObj.Type.GetQualifiedName()}.constructor(/* params */)";
+                    // Try to resolve constructor parameter types from module metadata
+                    var typeName = newObj.Type.GetQualifiedName();
+                    var ctorSig = "constructor(/* params */)";
+                    try
+                    {
+                        var tdef = _module.Types.FirstOrDefault(t => t.GetQualifiedName() == typeName || t.Name == newObj.Type.Name);
+                        if (tdef is ClassDefinition cd)
+                        {
+                            var ctors = cd.Methods.Where(m => m.IsConstructor).ToList();
+                            if (ctors.Count == 1)
+                            {
+                                var ctor = ctors[0];
+                                var paramTypes = ctor.Parameters.Select(p => p.Type.GetQualifiedName());
+                                ctorSig = $"constructor({string.Join(", ", paramTypes)})";
+                            }
+                            else if (ctors.Count > 1)
+                            {
+                                // choose first overload for representation
+                                var ctor = ctors[0];
+                                var paramTypes = ctor.Parameters.Select(p => p.Type.GetQualifiedName());
+                                ctorSig = $"constructor({string.Join(", ", paramTypes)})";
+                            }
+                        }
+                    }
+                    catch { }
+                    return $"newobj {typeName}.{ctorSig}";
                 }
                 break;
 
@@ -1701,20 +1724,21 @@ Name = property.Name,
             case OpCode.While:
                 if (instruction is WhileInstruction whileInst)
                 {
-                    var cond = FormatCondition(whileInst.Condition);
-                    var bodyCount = whileInst.Body.Count;
-                    return $"while {cond} {{ body:{bodyCount} }}";
+                    var sbW = new StringBuilder();
+                    DumpInstructionBlock(sbW, whileInst, 0);
+                    return sbW.ToString().TrimEnd();
                 }
                 break;
             case OpCode.For:
                 if (instruction is ForEachInstruction fe)
                 {
-                    return $"foreach ({fe.ItemName} in {fe.CollectionName}) {{ body:{fe.Body.Count} }}";
+                    var sbF = new StringBuilder();
+                    DumpInstructionBlock(sbF, fe, 0);
+                    return sbF.ToString().TrimEnd();
                 }
                 break;
 
             case OpCode.Br:
-                // Branch instructions would need target labels
                 return "br /* target */";
 
             case OpCode.Brtrue:

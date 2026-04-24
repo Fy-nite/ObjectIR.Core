@@ -17,7 +17,18 @@ public sealed class InstructionSerializer
     /// </summary>
     public static JsonElement SerializeInstructions(InstructionList instructions)
     {
-        var data = instructions.Select(CreateInstructionData).ToList();
+        var data = new List<InstructionData>();
+        foreach (var instr in instructions)
+        {
+            try
+            {
+                data.Add(CreateInstructionData(instr));
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to serialize instruction {instr?.GetType().Name}: {instr}", ex);
+            }
+        }
 
         var options = new JsonSerializerOptions
         {
@@ -34,7 +45,15 @@ public sealed class InstructionSerializer
     /// </summary>
     public static JsonDocument SerializeInstruction(Instruction instruction)
     {
-        var data = CreateInstructionData(instruction);
+        InstructionData data;
+        try
+        {
+            data = CreateInstructionData(instruction);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to serialize instruction {instruction?.GetType().Name}: {instruction}", ex);
+        }
 
         var options = new JsonSerializerOptions
         {
@@ -239,8 +258,8 @@ public sealed class InstructionSerializer
                 Operand = new IfOperandData
                 {
                     Condition = SerializeConditionData(ii.Condition),
-                    ThenBlock = ii.ThenBlock.Select(CreateInstructionData).ToList(),
-                    ElseBlock = ii.ElseBlock.Count > 0 ? ii.ElseBlock.Select(CreateInstructionData).ToList() : null
+                    ThenBlock = ii.ThenBlock?.Select(CreateInstructionData).ToList() ?? new List<InstructionData>(),
+                    ElseBlock = (ii.ElseBlock != null && ii.ElseBlock.Count > 0) ? ii.ElseBlock.Select(CreateInstructionData).ToList() : null
                 }
             },
             LoadElementInstruction => new InstructionData
