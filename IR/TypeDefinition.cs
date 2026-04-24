@@ -37,6 +37,8 @@ public abstract class TypeDefinition
 /// </summary>
 public sealed class ClassDefinition : TypeDefinition
 {
+    public List<TypeDefinition> NestedTypes;
+
     public TypeReference? BaseType { get; set; }
     public List<TypeReference> Interfaces { get; } = new();
     public List<FieldDefinition> Fields { get; } = new();
