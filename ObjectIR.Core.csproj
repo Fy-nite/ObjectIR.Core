@@ -4,7 +4,7 @@
     <TargetFrameworks>net8.0;net47</TargetFrameworks>
     <LangVersion>latest</LangVersion>
 
-    <ImplicitUsings Condition="'$(TargetFramework)' == 'net8.0'">enable</ImplicitUsings>
+    <ImplicitUsings Condition="'$(TargetFramework)' != 'net47'">enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageId>ObjectIR.Core</PackageId>
     <Version>0.1.0</Version>
