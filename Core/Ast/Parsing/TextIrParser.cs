@@ -1,8 +1,9 @@
+using ObjectIR.Core.AST;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace ObjectIR.AST;
+namespace ObjectIR.Core.AST;
 
 public static class TextIrParser
 {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using ObjectIR.AST;
+using ObjectIR.Core.AST;
 
 namespace ObjectIR.FobCompiler;
 
@@ -178,7 +178,7 @@ public sealed class FobIrCompiler
 	}
 
 	private static void CollectFromInstruction(
-		ObjectIR.AST.Instruction instruction,
+		ObjectIR.Core.AST.Instruction instruction,
 		HashSet<string> definedTypes,
 		HashSet<string> includes)
 	{

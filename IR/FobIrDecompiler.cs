@@ -1,5 +1,5 @@
 using System.Text;
-using ObjectIR.AST;
+using ObjectIR.Core.AST;
 
 namespace ObjectIR.FobCompiler;
 

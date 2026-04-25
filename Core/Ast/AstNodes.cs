@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using ObjectIR.Core;
 
-namespace ObjectIR.AST;
+namespace ObjectIR.Core.AST;
 
 public abstract record AstNode;
 

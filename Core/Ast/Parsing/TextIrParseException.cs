@@ -1,6 +1,6 @@
 using System;
 
-namespace ObjectIR.AST;
+namespace ObjectIR.Core.AST;
 
 public sealed class TextIrParseException : Exception
 {
