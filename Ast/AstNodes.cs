@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ObjectIR.Core;
 
 namespace ObjectIR.AST;
 
@@ -109,4 +110,7 @@ public sealed record NewObjInstruction(
 public sealed record MethodRef(
     TypeRef DeclaringType,
     string MethodName
-) : AstNode;
+) : AstNode
+{
+    public NativeMethod? NativeImpl { get; init; } = null;
+}
