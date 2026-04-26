@@ -32,6 +32,12 @@ public static class ModuleSerializationExtensions
         => module.Serialize().DumpToText();
 
     /// <summary>
+    /// Dumps the module as human-readable IR code (same as .ir.txt format)
+    /// </summary>
+    public static string DumpIRCode(this ModuleNode module)
+        => module.Serialize().DumpToIRCode();
+
+    /// <summary>
     /// Dumps the module as BSON (binary JSON) for smaller file sizes
     /// </summary>
     public static byte[] DumpBson(this ModuleNode module)

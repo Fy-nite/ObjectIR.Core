@@ -78,6 +78,193 @@ public sealed class ModuleSerializer
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Dumps the module as human-readable IR code (same as .ir.txt format)
+    /// </summary>
+    public string DumpToIRCode()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"module {_module.Name} version {_module.Version ?? "1.0.0"}");
+        sb.AppendLine();
+
+        foreach (var iface in _module.Interfaces)
+        {
+            DumpInterfaceAsIRCode(sb, iface);
+            sb.AppendLine();
+        }
+
+        foreach (var cls in _module.Classes)
+        {
+            DumpClassAsIRCode(sb, cls);
+            sb.AppendLine();
+        }
+
+        foreach (var str in _module.Structs)
+        {
+            DumpStructAsIRCode(sb, str);
+            sb.AppendLine();
+        }
+
+        return sb.ToString();
+    }
+
+    private void DumpInterfaceAsIRCode(StringBuilder sb, InterfaceNode interfaceDef)
+    {
+        sb.AppendLine($"interface {interfaceDef.Name} {{");
+        foreach (var method in interfaceDef.Methods)
+        {
+            var parameters = string.Join(", ", method.Parameters.Select(p => $"{p.Name}: {p.ParameterType.Name}"));
+            sb.AppendLine($"    method {method.Name}({parameters}) -> {method.ReturnType.Name}");
+        }
+        sb.AppendLine("}");
+    }
+
+    private void DumpClassAsIRCode(StringBuilder sb, ClassNode classDef)
+    {
+        var inheritance = new List<string>();
+        if (classDef.BaseType != null) inheritance.Add(classDef.BaseType);
+        inheritance.AddRange(classDef.Interfaces);
+
+        var inheritanceStr = inheritance.Count > 0 ? $" : {string.Join(", ", inheritance)}" : "";
+        sb.AppendLine($"class {classDef.Name}{inheritanceStr} {{");
+
+        foreach (var field in classDef.Fields)
+        {
+            sb.AppendLine($"    {field.Access.ToString().ToLower()} field {field.Name}: {field.FieldType.Name}");
+        }
+
+        if (classDef.Fields.Count > 0 && (classDef.Methods.Count > 0 || classDef.Constructors.Count > 0))
+            sb.AppendLine();
+
+        foreach (var ctor in classDef.Constructors)
+        {
+            DumpConstructorAsIRCode(sb, ctor);
+            if (ctor != classDef.Constructors.Last() || classDef.Methods.Count > 0) sb.AppendLine();
+        }
+
+        foreach (var method in classDef.Methods)
+        {
+            DumpMethodAsIRCode(sb, method);
+            if (method != classDef.Methods.Last()) sb.AppendLine();
+        }
+
+        sb.AppendLine("}");
+    }
+
+    private void DumpStructAsIRCode(StringBuilder sb, StructNode structDef)
+    {
+        sb.AppendLine($"struct {structDef.Name} {{");
+        foreach (var field in structDef.Fields)
+        {
+            sb.AppendLine($"    field {field.Name}: {field.FieldType.Name}");
+        }
+        sb.AppendLine("}");
+    }
+
+    private void DumpConstructorAsIRCode(StringBuilder sb, ConstructorNode ctor)
+    {
+        var parameters = string.Join(", ", ctor.Parameters.Select(p => $"{p.Name}: {p.ParameterType.Name}"));
+        sb.AppendLine($"    constructor({parameters}) {{");
+        DumpBlockAsIRCode(sb, ctor.Body, 2);
+        sb.AppendLine("    }");
+    }
+
+    private void DumpMethodAsIRCode(StringBuilder sb, MethodNode method)
+    {
+        var parameters = string.Join(", ", method.Parameters.Select(p => $"{p.Name}: {p.ParameterType.Name}"));
+        var implements = method.Implements != null ? $" implements {method.Implements}" : "";
+        var staticPrefix = method.IsStatic ? "static " : "";
+        
+        sb.AppendLine($"    {staticPrefix}method {method.Name}({parameters}) -> {method.ReturnType.Name}{implements} {{");
+        
+        foreach (var local in method.Locals)
+        {
+            sb.AppendLine($"        local {local.Name}: {local.LocalType.Name}");
+        }
+
+        if (method.Locals.Count > 0 && method.Body.Statements.Count > 0)
+            sb.AppendLine();
+
+        DumpBlockAsIRCode(sb, method.Body, 2);
+        sb.AppendLine("    }");
+    }
+
+    private void DumpBlockAsIRCode(StringBuilder sb, BlockStatement block, int indentLevel)
+    {
+        var ind = new string(' ', indentLevel * 4);
+        for (int i = 0; i < block.Statements.Count; i++)
+        {
+            var stmt = block.Statements[i];
+            
+            if (stmt is InstructionStatement instStmt)
+            {
+                // Look ahead for while pattern
+                if (i + 2 < block.Statements.Count && block.Statements[i + 2] is WhileStatement whileLookahead)
+                {
+                    if (block.Statements[i] is InstructionStatement s1 && block.Statements[i + 1] is InstructionStatement s2)
+                    {
+                        if (IsSimpleLoad(s1.Instruction) && IsSimpleLoad(s2.Instruction))
+                        {
+                            var left = RenderOperandFromLoad(s1.Instruction);
+                            var right = RenderOperandFromLoad(s2.Instruction);
+                            sb.AppendLine($"{ind}while ({left} {whileLookahead.Condition} {right}) {{");
+                            DumpBlockAsIRCode(sb, whileLookahead.Body, indentLevel + 1);
+                            sb.AppendLine($"{ind}}}");
+                            i += 2;
+                            continue;
+                        }
+                    }
+                }
+                
+                sb.AppendLine($"{ind}{DumpInstruction(instStmt.Instruction)}");
+            }
+            else if (stmt is IfStatement ifStmt)
+            {
+                sb.AppendLine($"{ind}if ({ifStmt.Condition}) {{");
+                DumpBlockAsIRCode(sb, ifStmt.Then, indentLevel + 1);
+                sb.AppendLine($"{ind}}}");
+                if (ifStmt.Else != null)
+                {
+                    sb.AppendLine($"{ind}else {{");
+                    DumpBlockAsIRCode(sb, ifStmt.Else, indentLevel + 1);
+                    sb.AppendLine($"{ind}}}");
+                }
+            }
+            else if (stmt is WhileStatement whileStmt)
+            {
+                sb.AppendLine($"{ind}while ({whileStmt.Condition}) {{");
+                DumpBlockAsIRCode(sb, whileStmt.Body, indentLevel + 1);
+                sb.AppendLine($"{ind}}}");
+            }
+        }
+    }
+
+    private string DumpInstruction(Instruction inst)
+    {
+        return inst switch
+        {
+            SimpleInstruction si => si.Operand != null ? $"{si.OpCode} {si.Operand}" : si.OpCode,
+            CallInstruction ci => $"{(ci.IsVirtual ? "callvirt" : "call")} {ci.Target.DeclaringType.Name}.{ci.Target.Name}({string.Join(", ", ci.Target.ParameterTypes.Select(p => p.Name))}) -> {ci.Target.ReturnType.Name}",
+            NewObjInstruction noi => $"newobj {noi.Type.Name}.constructor({string.Join(", ", noi.Constructor?.ParameterTypes.Select(p => p.Name) ?? Array.Empty<string>())})",
+            _ => inst.ToString() ?? inst.GetType().Name
+        };
+    }
+
+    private static bool IsSimpleLoad(Instruction inst)
+    {
+        if (inst is SimpleInstruction si)
+        {
+            return si.OpCode is "ldloc" or "ldarg" or "ldc.i4" or "ldc.i8" or "ldstr";
+        }
+        return false;
+    }
+
+    private static string RenderOperandFromLoad(Instruction inst)
+    {
+        if (inst is SimpleInstruction si) return si.Operand ?? "";
+        return "?";
+    }
+
     private ModuleData DumpModule()
     {
         var types = new List<TypeData>();
