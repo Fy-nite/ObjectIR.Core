@@ -109,6 +109,11 @@ public sealed record ConstructorNode() : AstNode
 
 public sealed record MethodNode(string Name) : AstNode
 {
+    private List<ParameterNode> printlnParams;
+    private TypeRef @void;
+    private bool v;
+    private NativeMethod printlnNative;
+
     public List<ParameterNode> Parameters { get; } = new();
     public TypeRef ReturnType { get; set; } = TypeRef.Void;
     public bool IsStatic { get; set; }
@@ -119,6 +124,7 @@ public sealed record MethodNode(string Name) : AstNode
     public BlockStatement Body { get; set; } = new(new());
     public AccessModifier Access { get; set; } = AccessModifier.Public;
     public List<LocalDeclarationStatement> Locals { get; } = new();
+    public NativeMethod? NativeImpl { get; set; }
 
     public MethodNode(string name, IEnumerable<ParameterNode> parameters, TypeRef returnType, bool isStatic, string? implements, BlockStatement body) : this(name)    
     {
@@ -127,6 +133,22 @@ public sealed record MethodNode(string Name) : AstNode
         IsStatic = isStatic;
         Implements = implements;
         Body = body;
+    }
+
+    public MethodNode(string name, IEnumerable<ParameterNode> parameters, TypeRef returnType, bool isStatic, NativeMethod nativeImpl) : this(name)
+    {
+        Parameters.AddRange(parameters);
+        ReturnType = returnType;
+        IsStatic = isStatic;
+        NativeImpl = nativeImpl;
+    }
+
+    public MethodNode(string Name, List<ParameterNode> printlnParams, TypeRef @void, bool v, NativeMethod printlnNative) : this(Name)
+    {
+        this.printlnParams = printlnParams;
+        this.@void = @void;
+        this.v = v;
+        this.printlnNative = printlnNative;
     }
 }
 
