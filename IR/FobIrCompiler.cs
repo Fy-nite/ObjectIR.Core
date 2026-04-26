@@ -186,7 +186,7 @@ public sealed class FobIrCompiler
 		{
 			case CallInstruction call:
 				TryAdd(call.Target.DeclaringType.Name, definedTypes, includes);
-				TryAdd(call.ReturnType.Name, definedTypes, includes);
+				TryAdd(call.Target.ReturnType.Name, definedTypes, includes);
 				foreach (var arg in call.Arguments)
 					TryAdd(arg.Name, definedTypes, includes);
 				break;

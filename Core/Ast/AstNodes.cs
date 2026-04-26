@@ -1,61 +1,147 @@
 using System.Collections.Generic;
+using System.Linq;
 using ObjectIR.Core;
 
 namespace ObjectIR.Core.AST;
 
 public abstract record AstNode;
 
-public sealed record ModuleNode(
-    string Name,
-    string? Version,
-    IReadOnlyList<InterfaceNode> Interfaces,
-    IReadOnlyList<ClassNode> Classes
-) : AstNode;
+public sealed record ModuleNode(string Name) : AstNode
+{
+    public string? Version { get; set; }
+    public List<InterfaceNode> Interfaces { get; } = new();
+    public List<ClassNode> Classes { get; } = new();
+    public List<StructNode> Structs { get; } = new();
 
-public sealed record InterfaceNode(
-    string Name,
-    IReadOnlyList<MethodSignature> Methods
-) : AstNode;
+    public ModuleNode(string name, string? version, List<InterfaceNode> interfaces, List<ClassNode> classes) : this(name)
+    {
+        Version = version;
+        Interfaces.AddRange(interfaces);
+        Classes.AddRange(classes);
+    }
+}
 
-public sealed record ClassNode(
-    string Name,
-    IReadOnlyList<string> BaseTypes,
-    IReadOnlyList<FieldNode> Fields,
-    IReadOnlyList<ConstructorNode> Constructors,
-    IReadOnlyList<MethodNode> Methods
-) : AstNode;
+public sealed record InterfaceNode(string Name) : AstNode
+{
+    public string? Namespace { get; set; }
+    public AccessModifier Access { get; set; } = AccessModifier.Public;
+    public List<MethodSignature> Methods { get; } = new();
 
-public sealed record FieldNode(
-    string Name,
-    TypeRef FieldType,
-    AccessModifier Access
-) : AstNode;
+    public InterfaceNode(string name, List<MethodSignature> methods) : this(name)
+    {
+        Methods.AddRange(methods);
+    }
+}
 
-public sealed record MethodSignature(
-    string Name,
-    IReadOnlyList<ParameterNode> Parameters,
-    TypeRef ReturnType,
-    bool IsStatic,
-    string? Implements
-) : AstNode;
+public sealed record StructNode(string Name) : AstNode
+{
+    public string? Namespace { get; set; }
+    public AccessModifier Access { get; set; } = AccessModifier.Public;
+    public List<FieldNode> Fields { get; } = new();
+}
 
-public sealed record ConstructorNode(
-    IReadOnlyList<ParameterNode> Parameters,
-    BlockStatement Body
-) : AstNode;
+public sealed record ClassNode(string Name) : AstNode
+{
+    public string? Namespace { get; set; }
+    public string? BaseType { get; set; }
+    public List<string> BaseTypes { get; } = new();
+    public List<string> Interfaces { get; } = new();
+    public List<AccessModifier> Modifiers { get; } = new();
+    public List<FieldNode> Fields { get; } = new();
+    public List<ConstructorNode> Constructors { get; } = new();
+    public List<MethodNode> Methods { get; } = new();
+    public bool IsAbstract { get; set; }
+    public bool IsSealed { get; set; }
+    public bool IsStatic { get; set; }
+    public List<GenericParameterNode> GenericParameters { get; } = new();
 
-public sealed record MethodNode(
-    string Name,
-    IReadOnlyList<ParameterNode> Parameters,
-    TypeRef ReturnType,
-    bool IsStatic,
-    string? Implements,
-    BlockStatement Body
-) : AstNode;
+    public ClassNode(string name, List<string> baseTypes, List<FieldNode> fields, List<ConstructorNode> constructors, List<MethodNode> methods) : this(name)
+    {
+        BaseTypes.AddRange(baseTypes);
+        Fields.AddRange(fields);
+        Constructors.AddRange(constructors);
+        Methods.AddRange(methods);
+    }
+}
+
+public sealed record GenericParameterNode(string Name) : AstNode;
+
+public sealed record FieldNode(string Name, TypeRef FieldType) : AstNode
+{
+    public AccessModifier Access { get; set; } = AccessModifier.Public;
+    public bool IsStatic { get; set; }
+    public bool IsReadOnly { get; set; }
+    public object? InitialValue { get; set; }
+
+    public FieldNode(string name, TypeRef fieldType, AccessModifier access) : this(name, fieldType)
+    {
+        Access = access;
+    }
+}
+
+public sealed record MethodSignature(string Name) : AstNode
+{
+    public List<ParameterNode> Parameters { get; } = new();
+    public TypeRef ReturnType { get; set; } = TypeRef.Void;
+    public bool IsStatic { get; set; }
+    public string? Implements { get; set; }
+
+    public MethodSignature(string name, IEnumerable<ParameterNode> parameters, TypeRef returnType, bool isStatic, string? implements) : this(name)
+    {
+        Parameters.AddRange(parameters);
+        ReturnType = returnType;
+        IsStatic = isStatic;
+        Implements = implements;
+    }
+}
+
+public sealed record ConstructorNode() : AstNode
+{
+    public List<ParameterNode> Parameters { get; } = new();
+    public BlockStatement Body { get; set; } = new(new());
+
+    public ConstructorNode(IEnumerable<ParameterNode> parameters, BlockStatement body) : this()
+    {
+        Parameters.AddRange(parameters);
+        Body = body;
+    }
+}
+
+public sealed record MethodNode(string Name) : AstNode
+{
+    public List<ParameterNode> Parameters { get; } = new();
+    public TypeRef ReturnType { get; set; } = TypeRef.Void;
+    public bool IsStatic { get; set; }
+    public bool IsVirtual { get; set; }
+    public bool IsOverride { get; set; }
+    public bool IsAbstract { get; set; }
+    public string? Implements { get; set; }
+    public BlockStatement Body { get; set; } = new(new());
+    public AccessModifier Access { get; set; } = AccessModifier.Public;
+    public List<LocalDeclarationStatement> Locals { get; } = new();
+
+    public MethodNode(string name, IEnumerable<ParameterNode> parameters, TypeRef returnType, bool isStatic, string? implements, BlockStatement body) : this(name)    
+    {
+        Parameters.AddRange(parameters);
+        ReturnType = returnType;
+        IsStatic = isStatic;
+        Implements = implements;
+        Body = body;
+    }
+}
 
 public sealed record ParameterNode(string Name, TypeRef ParameterType) : AstNode;
 
-public sealed record TypeRef(string Name) : AstNode;
+public sealed record TypeRef(string Name) : AstNode
+{
+    public static readonly TypeRef Void = new("void");
+    public static readonly TypeRef Int32 = new("int32");
+    public static readonly TypeRef Float32 = new("float32");
+    public static readonly TypeRef String = new("string");
+    public static readonly TypeRef Bool = new("bool");
+
+    public static implicit operator TypeRef(string name) => new TypeRef(name);
+}
 
 public enum AccessModifier
 {
@@ -67,7 +153,7 @@ public enum AccessModifier
 
 public abstract record Statement : AstNode;
 
-public sealed record BlockStatement(IReadOnlyList<Statement> Statements) : Statement;
+public sealed record BlockStatement(List<Statement> Statements) : Statement;
 
 public sealed record LocalDeclarationStatement(
     string Name,
@@ -91,26 +177,34 @@ public abstract record Instruction : AstNode;
 
 public sealed record SimpleInstruction(
     string OpCode,
-    string? Operand
+    string? Operand = null
 ) : Instruction;
 
-public sealed record CallInstruction(
-    MethodRef Target,
-    IReadOnlyList<TypeRef> Arguments,
+public sealed record MethodReference(
+    TypeRef DeclaringType,
+    string Name,
     TypeRef ReturnType,
+    List<TypeRef> ParameterTypes
+) : AstNode
+{
+    public List<TypeRef> GenericArguments { get; } = new();
+    public NativeMethod? NativeImpl { get; init; } = null;
+}
+
+public sealed record FieldReference(
+    TypeRef DeclaringType,
+    string Name,
+    TypeRef FieldType
+) : AstNode;
+
+public sealed record CallInstruction(
+    MethodReference Target,
+    IReadOnlyList<TypeRef> Arguments,
     bool IsVirtual
 ) : Instruction;
 
 public sealed record NewObjInstruction(
     TypeRef Type,
-    MethodRef? Constructor,
+    MethodReference? Constructor,
     IReadOnlyList<TypeRef> Arguments
 ) : Instruction;
-
-public sealed record MethodRef(
-    TypeRef DeclaringType,
-    string MethodName
-) : AstNode
-{
-    public NativeMethod? NativeImpl { get; init; } = null;
-}

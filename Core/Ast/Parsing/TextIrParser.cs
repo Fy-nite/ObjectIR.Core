@@ -496,9 +496,12 @@ public static class TextIrParser
         }
 
         var (methodRef, args) = ParseTargetAndArgs(left);
-        var returnType = new TypeRef(right.ToString());
+        var returnTypeNode = new TypeRef(right.ToString());
 
-        return new CallInstruction(methodRef, args, returnType, isVirtual);
+        // Update the return type on the method reference as well
+        var updatedMethodRef = methodRef with { ReturnType = returnTypeNode };
+
+        return new CallInstruction(updatedMethodRef, args, isVirtual);
     }
 
     private static NewObjInstruction ParseNewObj(string text)
@@ -507,7 +510,7 @@ public static class TextIrParser
         var ctorIndex = span.IndexOf(".constructor", StringComparison.OrdinalIgnoreCase);
         if (ctorIndex < 0)
         {
-            return new NewObjInstruction(new TypeRef(span.ToString()), null, Array.Empty<TypeRef>());
+            return new NewObjInstruction(new TypeRef(span.ToString()), null, new List<TypeRef>());
         }
 
         var typeName = span.Slice(0, ctorIndex).Trim();
@@ -526,11 +529,11 @@ public static class TextIrParser
 
         var argsSpan = ctorSpan.Slice(openParenIndex + 1, closeParenIndex - (openParenIndex + 1));
         var args = ParseTypeList(argsSpan);
-        var method = new MethodRef(new TypeRef(typeName.ToString()), "constructor");
-        return new NewObjInstruction(new TypeRef(typeName.ToString()), method, args);
+        var method = new MethodReference(new TypeRef(typeName.ToString()), "constructor", TypeRef.Void, new List<TypeRef>());
+        return new NewObjInstruction(new TypeRef(typeName.ToString()), method, args.ToList());
     }
 
-    private static (MethodRef Method, IReadOnlyList<TypeRef> Args) ParseTargetAndArgs(ReadOnlySpan<char> text)
+    private static (MethodReference Method, IReadOnlyList<TypeRef> Args) ParseTargetAndArgs(ReadOnlySpan<char> text)
     {
         var openParenIndex = text.IndexOf('(');
         var closeParenIndex = text.LastIndexOf(')');
@@ -561,7 +564,7 @@ public static class TextIrParser
             throw new TextIrParseException("Invalid target format.");
         }
 
-        var method = new MethodRef(new TypeRef(typeName.ToString()), methodName.ToString());
+        var method = new MethodReference(new TypeRef(typeName.ToString()), methodName.ToString(), TypeRef.Void, new List<TypeRef>());
         var args = ParseTypeList(argsSpan);
         return (method, args);
     }

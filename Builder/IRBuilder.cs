@@ -1,23 +1,22 @@
 namespace ObjectIR.Core.Builder;
 
 using System;
-using ObjectIR.Core.IR;
+using System.Collections.Generic;
+using ObjectIR.Core.AST;
 
 /// <summary>
-/// Fluent API for building IR modules
+/// Fluent API for building IR modules using AST nodes
 /// </summary>
 public sealed class IRBuilder
 {
-    private Module _module;
-    private ClassDefinition? _currentClass;
-    private MethodDefinition? _currentMethod;
+    private ModuleNode _module;
 
     public IRBuilder(string moduleName)
     {
-        _module = new Module(moduleName);
+        _module = new ModuleNode(moduleName);
     }
 
-    public Module Build() => _module;
+    public ModuleNode Build() => _module;
 
     // ========================================================================
     // Type Building
@@ -25,28 +24,24 @@ public sealed class IRBuilder
 
     public ClassBuilder Class(string name)
     {
-        _currentClass = _module.DefineClass(name);
-        return new ClassBuilder(this, _currentClass);
+        var classNode = new ClassNode(name);
+        _module.Classes.Add(classNode);
+        return new ClassBuilder(this, classNode);
     }
 
     public InterfaceBuilder Interface(string name)
     {
-        var interfaceDef = _module.DefineInterface(name);
-        return new InterfaceBuilder(this, interfaceDef);
+        var interfaceNode = new InterfaceNode(name);
+        _module.Interfaces.Add(interfaceNode);
+        return new InterfaceBuilder(this, interfaceNode);
     }
 
     public StructBuilder Struct(string name)
     {
-        var structDef = _module.DefineStruct(name);
-        return new StructBuilder(this, structDef);
+        var structNode = new StructNode(name);
+        _module.Structs.Add(structNode);
+        return new StructBuilder(this, structNode);
     }
-
-    // ========================================================================
-    // Internal Methods
-    // ========================================================================
-
-    internal void SetCurrentClass(ClassDefinition? classDef) => _currentClass = classDef;
-    internal void SetCurrentMethod(MethodDefinition? method) => _currentMethod = method;
 }
 
 /// <summary>
@@ -55,17 +50,17 @@ public sealed class IRBuilder
 public sealed class ClassBuilder
 {
     private readonly IRBuilder _builder;
-    private readonly ClassDefinition _class;
+    private readonly ClassNode _class;
 
-    internal ClassBuilder(IRBuilder builder, ClassDefinition classDef)
+    internal ClassBuilder(IRBuilder builder, ClassNode classNode)
     {
         _builder = builder;
-        _class = classDef;
+        _class = classNode;
     }
 
     public ClassBuilder Access(AccessModifier access)
     {
-        _class.Access = access;
+        _class.Modifiers.Add(access);
         return this;
     }
 
@@ -75,13 +70,13 @@ public sealed class ClassBuilder
         return this;
     }
 
-    public ClassBuilder Extends(TypeReference baseType)
+    public ClassBuilder Extends(string baseType)
     {
         _class.BaseType = baseType;
         return this;
     }
 
-    public ClassBuilder Implements(params TypeReference[] interfaces)
+    public ClassBuilder Implements(params string[] interfaces)
     {
         _class.Interfaces.AddRange(interfaces);
         return this;
@@ -103,32 +98,34 @@ public sealed class ClassBuilder
     {
         foreach (var param in parameters)
         {
-            _class.GenericParameters.Add(new GenericParameter(param));
+            _class.GenericParameters.Add(new GenericParameterNode(param));
         }
         return this;
     }
 
-    public FieldBuilder Field(string name, TypeReference type)
+    public FieldBuilder Field(string name, TypeRef type)
     {
-        var field = _class.DefineField(name, type);
+        var field = new FieldNode(name, type);
+        _class.Fields.Add(field);
         return new FieldBuilder(this, field);
     }
 
-    public MethodBuilder Method(string name, TypeReference returnType)
+    public MethodBuilder Method(string name, TypeRef returnType)
     {
-        var method = _class.DefineMethod(name, returnType);
-        return new MethodBuilder(this, _builder, method);
+        var method = new MethodNode(name) { ReturnType = returnType };
+        _class.Methods.Add(method);
+        return new MethodBuilder(this, method);
     }
 
     public MethodBuilder Constructor()
     {
-        var ctor = _class.DefineConstructor();
-        return new MethodBuilder(this, _builder, ctor);
+        var ctor = new ConstructorNode();
+        _class.Constructors.Add(ctor);
+        return new MethodBuilder(this, ctor);
     }
 
     public IRBuilder EndClass()
     {
-        _builder.SetCurrentClass(null);
         return _builder;
     }
 }
@@ -139,12 +136,12 @@ public sealed class ClassBuilder
 public sealed class InterfaceBuilder
 {
     private readonly IRBuilder _builder;
-    private readonly InterfaceDefinition _interface;
+    private readonly InterfaceNode _interface;
 
-    internal InterfaceBuilder(IRBuilder builder, InterfaceDefinition interfaceDef)
+    internal InterfaceBuilder(IRBuilder builder, InterfaceNode interfaceNode)
     {
         _builder = builder;
-        _interface = interfaceDef;
+        _interface = interfaceNode;
     }
 
     public InterfaceBuilder Access(AccessModifier access)
@@ -159,9 +156,9 @@ public sealed class InterfaceBuilder
         return this;
     }
 
-    public InterfaceBuilder Method(string name, TypeReference returnType)
+    public InterfaceBuilder Method(string name, TypeRef returnType)
     {
-        _interface.DefineMethod(name, returnType);
+        _interface.Methods.Add(new MethodSignature(name) { ReturnType = returnType });
         return this;
     }
 
@@ -174,12 +171,12 @@ public sealed class InterfaceBuilder
 public sealed class StructBuilder
 {
     private readonly IRBuilder _builder;
-    private readonly StructDefinition _struct;
+    private readonly StructNode _struct;
 
-    internal StructBuilder(IRBuilder builder, StructDefinition structDef)
+    internal StructBuilder(IRBuilder builder, StructNode structNode)
     {
         _builder = builder;
-        _struct = structDef;
+        _struct = structNode;
     }
 
     public StructBuilder Access(AccessModifier access)
@@ -188,9 +185,9 @@ public sealed class StructBuilder
         return this;
     }
 
-    public StructBuilder Field(string name, TypeReference type)
+    public StructBuilder Field(string name, TypeRef type)
     {
-        _struct.DefineField(name, type);
+        _struct.Fields.Add(new FieldNode(name, type));
         return this;
     }
 
@@ -203,9 +200,9 @@ public sealed class StructBuilder
 public sealed class FieldBuilder
 {
     private readonly ClassBuilder _classBuilder;
-    private readonly FieldDefinition _field;
+    private readonly FieldNode _field;
 
-    internal FieldBuilder(ClassBuilder classBuilder, FieldDefinition field)
+    internal FieldBuilder(ClassBuilder classBuilder, FieldNode field)
     {
         _classBuilder = classBuilder;
         _field = field;
@@ -244,157 +241,200 @@ public sealed class FieldBuilder
 public sealed class MethodBuilder
 {
     private readonly ClassBuilder? _classBuilder;
-    private readonly IRBuilder _irBuilder;
-    private readonly MethodDefinition _method;
+    private readonly MethodNode? _method;
+    private readonly ConstructorNode? _ctor;
 
-    internal MethodBuilder(ClassBuilder? classBuilder, IRBuilder irBuilder, MethodDefinition method)
+    internal MethodBuilder(ClassBuilder classBuilder, MethodNode method)
     {
         _classBuilder = classBuilder;
-        _irBuilder = irBuilder;
         _method = method;
-        _irBuilder.SetCurrentMethod(method);
+    }
+
+    internal MethodBuilder(ClassBuilder classBuilder, ConstructorNode ctor)
+    {
+        _classBuilder = classBuilder;
+        _ctor = ctor;
     }
 
     public MethodBuilder Access(AccessModifier access)
     {
-        _method.Access = access;
+        if (_method != null) _method.Access = access;
         return this;
     }
 
     public MethodBuilder Static()
     {
-        _method.IsStatic = true;
+        if (_method != null) _method.IsStatic = true;
         return this;
     }
 
     public MethodBuilder Virtual()
     {
-        _method.IsVirtual = true;
+        if (_method != null) _method.IsVirtual = true;
         return this;
     }
 
     public MethodBuilder Override()
     {
-        _method.IsOverride = true;
+        if (_method != null) _method.IsOverride = true;
         return this;
     }
 
     public MethodBuilder Abstract()
     {
-        _method.IsAbstract = true;
+        if (_method != null) _method.IsAbstract = true;
         return this;
     }
 
-    public MethodBuilder Parameter(string name, TypeReference type)
+    public MethodBuilder Parameter(string name, TypeRef type)
     {
-        _method.DefineParameter(name, type);
+        var param = new ParameterNode(name, type);
+        if (_method != null) _method.Parameters.Add(param);
+        else if (_ctor != null) _ctor.Parameters.Add(param);
         return this;
     }
 
-    public MethodBuilder Local(string name, TypeReference type)
+    public MethodBuilder Local(string name, TypeRef type)
     {
-        _method.DefineLocal(name, type);
+        _method?.Locals.Add(new LocalDeclarationStatement(name, type));
         return this;
     }
 
     public InstructionBuilder Body()
     {
-        return new InstructionBuilder(this, _method.Instructions);
+        var body = _method?.Body ?? _ctor?.Body ?? new BlockStatement(new());
+        if (_method != null) _method.Body = body;
+        else if (_ctor != null) _ctor.Body = body;
+        return new InstructionBuilder(this, body.Statements);
     }
 
     public ClassBuilder? EndMethod()
     {
-        _irBuilder.SetCurrentMethod(null);
         return _classBuilder;
     }
 }
 
 /// <summary>
-/// Builder for emitting instructions
+/// Builder for emitting instructions into an AST BlockStatement
 /// </summary>
 public sealed class InstructionBuilder
 {
     private readonly MethodBuilder _methodBuilder;
-    private readonly InstructionList _instructions;
+    private readonly List<Statement> _statements;
 
-    internal InstructionBuilder(MethodBuilder methodBuilder, InstructionList instructions)
+    internal InstructionBuilder(MethodBuilder methodBuilder, List<Statement> statements)
     {
         _methodBuilder = methodBuilder;
-        _instructions = instructions;
+        _statements = statements;
+    }
+
+    private InstructionBuilder Emit(string opCode, string? operand = null)
+    {
+        _statements.Add(new InstructionStatement(new SimpleInstruction(opCode, operand)));
+        return this;
     }
 
     // Load/Store
-    public InstructionBuilder Ldarg(int index) { _instructions.EmitLoadArg(index); return this; }
-    public InstructionBuilder Ldloc(string name) { _instructions.EmitLoadLocal(name); return this; }
-    public InstructionBuilder Ldfld(FieldReference field) { _instructions.EmitLoadField(field); return this; }
-    public InstructionBuilder Ldsfld(FieldReference field) { _instructions.EmitLoadStaticField(field); return this; }
-    public InstructionBuilder LdcI4(int value) { _instructions.EmitLoadConstant(value, TypeReference.Int32); return this; }
-    public InstructionBuilder LdcR4(float value) { _instructions.EmitLoadConstant(value, TypeReference.Float32); return this; }
-    public InstructionBuilder Ldstr(string value) { _instructions.EmitLoadConstant(value, TypeReference.String); return this; }
-    public InstructionBuilder Ldnull() { _instructions.EmitLoadNull(); return this; }
+    public InstructionBuilder Ldarg(int index) => Emit("ldarg", index.ToString());
+    public InstructionBuilder Ldloc(string name) => Emit("ldloc", name);
+    
+    public InstructionBuilder Ldfld(FieldReference field)
+    {
+        _statements.Add(new InstructionStatement(new SimpleInstruction("ldfld", $"{field.DeclaringType.Name}::{field.Name}")));
+        return this;
+    }
 
-    public InstructionBuilder Stloc(string name) { _instructions.EmitStoreLocal(name); return this; }
-    public InstructionBuilder Stfld(FieldReference field) { _instructions.EmitStoreField(field); return this; }
+    public InstructionBuilder Ldsfld(FieldReference field)
+    {
+        _statements.Add(new InstructionStatement(new SimpleInstruction("ldsfld", $"{field.DeclaringType.Name}::{field.Name}")));
+        return this;
+    }
+
+    public InstructionBuilder LdcI4(int value) => Emit("ldc.i4", value.ToString());
+    public InstructionBuilder LdcR4(float value) => Emit("ldc.r4", value.ToString());
+    public InstructionBuilder Ldstr(string value) => Emit("ldstr", value);
+    public InstructionBuilder Ldnull() => Emit("ldnull");
+
+    public InstructionBuilder Stloc(string name) => Emit("stloc", name);
+    
+    public InstructionBuilder Stfld(FieldReference field)
+    {
+        _statements.Add(new InstructionStatement(new SimpleInstruction("stfld", $"{field.DeclaringType.Name}::{field.Name}")));
+        return this;
+    }
 
     // Arithmetic
-    public InstructionBuilder Add() { _instructions.EmitAdd(); return this; }
-    public InstructionBuilder Sub() { _instructions.EmitSub(); return this; }
-    public InstructionBuilder Mul() { _instructions.EmitMul(); return this; }
-    public InstructionBuilder Div() { _instructions.EmitDiv(); return this; }
+    public InstructionBuilder Add() => Emit("add");
+    public InstructionBuilder Sub() => Emit("sub");
+    public InstructionBuilder Mul() => Emit("mul");
+    public InstructionBuilder Div() => Emit("div");
 
     // Comparison
-    public InstructionBuilder Ceq() { _instructions.EmitCompareEqual(); return this; }
-    public InstructionBuilder Cgt() { _instructions.EmitCompareGreater(); return this; }
-    public InstructionBuilder Clt() { _instructions.EmitCompareLess(); return this; }
+    public InstructionBuilder Ceq() => Emit("ceq");
+    public InstructionBuilder Cgt() => Emit("cgt");
+    public InstructionBuilder Clt() => Emit("clt");
 
     // Calls
-    public InstructionBuilder Call(MethodReference method) { _instructions.EmitCall(method); return this; }
-    public InstructionBuilder Callvirt(MethodReference method) { _instructions.EmitCallVirtual(method); return this; }
+    public InstructionBuilder Call(MethodReference method) 
+    {
+        _statements.Add(new InstructionStatement(new CallInstruction(
+            method,
+            new List<TypeRef>(),
+            false
+        )));
+        return this;
+    }
+
+    public InstructionBuilder Callvirt(MethodReference method)
+    {
+        _statements.Add(new InstructionStatement(new CallInstruction(
+            method,
+            new List<TypeRef>(),
+            true
+        )));
+        return this;
+    }
 
     // Object operations
-    public InstructionBuilder Newobj(TypeReference type) { _instructions.EmitNewObject(type); return this; }
-    public InstructionBuilder Newarr(TypeReference elementType) { _instructions.EmitNewArray(elementType); return this; }
+    public InstructionBuilder Newobj(TypeRef type, MethodReference? constructor = null)
+    {
+        _statements.Add(new InstructionStatement(new NewObjInstruction(
+            type,
+            constructor,
+            new List<TypeRef>()
+        )));
+        return this;
+    }
 
     // Stack
-    public InstructionBuilder Dup() { _instructions.EmitDup(); return this; }
-    public InstructionBuilder Pop() { _instructions.EmitPop(); return this; }
-
+    public InstructionBuilder Dup() => Emit("dup");
+    public InstructionBuilder Pop() => Emit("pop");
 
     // Control flow
-    public InstructionBuilder Ret() { _instructions.EmitReturn(); return this; }
+    public InstructionBuilder Ret() => Emit("ret");
 
-    public InstructionBuilder If(Condition condition, Action<InstructionBuilder> thenBlock, Action<InstructionBuilder>? elseBlock = null)
+    public InstructionBuilder If(string condition, Action<InstructionBuilder> thenBlock, Action<InstructionBuilder>? elseBlock = null)
     {
-        var ifInst = new IfInstruction(condition);
-        var thenBuilder = new InstructionBuilder(_methodBuilder, ifInst.ThenBlock);
-        thenBlock(thenBuilder);
+        var thenStatements = new List<Statement>();
+        thenBlock(new InstructionBuilder(_methodBuilder, thenStatements));
         
+        BlockStatement? elseStmt = null;
         if (elseBlock != null)
         {
-            ifInst.ElseBlock = new InstructionList();
-            var elseBuilder = new InstructionBuilder(_methodBuilder, ifInst.ElseBlock);
-            elseBlock(elseBuilder);
+            var elseStatements = new List<Statement>();
+            elseBlock(new InstructionBuilder(_methodBuilder, elseStatements));
+            elseStmt = new BlockStatement(elseStatements);
         }
-        
-        _instructions.Add(ifInst);
+
+        _statements.Add(new IfStatement(condition, new BlockStatement(thenStatements), elseStmt));
         return this;
     }
 
-    public InstructionBuilder While(Condition condition, Action<InstructionBuilder> body)
+    public InstructionBuilder While(string condition, Action<InstructionBuilder> body)
     {
-        var whileInst = new WhileInstruction(condition);
-        var bodyBuilder = new InstructionBuilder(_methodBuilder, whileInst.Body);
-        body(bodyBuilder);
-        _instructions.Add(whileInst);
-        return this;
-    }
-
-    public InstructionBuilder Foreach(string itemName, string collectionName, Action<InstructionBuilder> body)
-    {
-        var foreachInst = new ForEachInstruction(itemName, collectionName);
-        var bodyBuilder = new InstructionBuilder(_methodBuilder, foreachInst.Body);
-        body(bodyBuilder);
-        _instructions.Add(foreachInst);
+        var bodyStatements = new List<Statement>();
+        body(new InstructionBuilder(_methodBuilder, bodyStatements));
+        _statements.Add(new WhileStatement(condition, new BlockStatement(bodyStatements)));
         return this;
     }
 
