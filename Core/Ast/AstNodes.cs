@@ -12,7 +12,7 @@ public sealed record ModuleNode(string Name) : AstNode
     public List<InterfaceNode> Interfaces { get; } = new();
     public List<ClassNode> Classes { get; } = new();
     public List<StructNode> Structs { get; } = new();
-
+    public List<Attribute>? ModuleAttributes { get; } = new();
     public ModuleNode(string name, string? version, List<InterfaceNode> interfaces, List<ClassNode> classes) : this(name)
     {
         Version = version;
@@ -109,10 +109,10 @@ public sealed record ConstructorNode() : AstNode
 
 public sealed record MethodNode(string Name) : AstNode
 {
-    private List<ParameterNode> printlnParams;
+    private List<ParameterNode> Params;
     private TypeRef @void;
     private bool v;
-    private NativeMethod printlnNative;
+    private NativeMethod Native;
 
     public List<ParameterNode> Parameters { get; } = new();
     public TypeRef ReturnType { get; set; } = TypeRef.Void;
@@ -145,10 +145,10 @@ public sealed record MethodNode(string Name) : AstNode
 
     public MethodNode(string Name, List<ParameterNode> printlnParams, TypeRef @void, bool v, NativeMethod printlnNative) : this(Name)
     {
-        this.printlnParams = printlnParams;
+        this.Params = printlnParams;
         this.@void = @void;
         this.v = v;
-        this.printlnNative = printlnNative;
+        this.Native = printlnNative;
     }
 }
 
