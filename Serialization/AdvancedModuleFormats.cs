@@ -10,6 +10,43 @@ using System.Text;
 public static class AdvancedModuleFormats
 {
   /// <summary>
+  /// Dumps a simple text summary of all methods and their instruction counts
+  /// </summary>
+  public static string DumpToText(ModuleData module)
+  {
+    var sb = new StringBuilder();
+    sb.AppendLine($"Module: {module.Name} (v{module.Version})");
+    sb.AppendLine(new string('-', 40));
+
+    if (module.Types.Length > 0)
+    {
+      foreach (var type in module.Types)
+      {
+        if (type.Methods.Length == 0) continue;
+        
+        sb.AppendLine($"Type: {type.Name}");
+        foreach (var method in type.Methods)
+        {
+          var name = method.IsConstructor ? ".ctor" : method.Name;
+          sb.AppendLine($"  {name.PadRight(25)} : {method.InstructionCount} instructions");
+        }
+        sb.AppendLine();
+      }
+    }
+
+    if (module.Functions.Length > 0)
+    {
+      sb.AppendLine("Global Functions:");
+      foreach (var func in module.Functions)
+      {
+        sb.AppendLine($"  {func.Name.PadRight(25)} : {func.InstructionCount} instructions");
+      }
+    }
+
+    return sb.ToString();
+  }
+
+  /// <summary>
   /// Dumps module as CSV format for spreadsheet analysis
   /// </summary>
   public static string DumpToCSV(ModuleData module)

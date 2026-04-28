@@ -26,10 +26,10 @@ public static class ModuleSerializationExtensions
         => module.Serialize().DumpToJson(indented);
 
     /// <summary>
-    /// Dumps the module as human-readable text
+    /// Dumps the module as human-readable text (summary of methods)
     /// </summary>
     public static string DumpText(this ModuleNode module)
-        => module.Serialize().DumpToText();
+        => AdvancedModuleFormats.DumpToText(module.Dump());
 
     /// <summary>
     /// Dumps the module as human-readable IR code (same as .ir.txt format)
