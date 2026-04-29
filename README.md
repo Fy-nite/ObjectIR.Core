@@ -2,6 +2,15 @@
 
 A .NET 8 library for building, manipulating, and serialising an **object-oriented intermediate representation (IR)**. Think LLVM IR, but designed from the ground up for OO languages — classes, interfaces, structs, generics, virtual dispatch, and all.
 
+
+## Lifecycle
+
+Support for using ObjectIR.Core.IR has ended, please migrate any tooling to consume ObjectIR.Core.AST instead.
+documentation will take time to update but is straightfoward to use when reading related files in `Core/*` and `Core/AST/*`
+for legacy codebases, please use commit `d54358e28075f656511b14db0e409d4c1500da84` to maintain your codebases.
+
+thank you: `charlie`
+
 ---
 
 ## Why ObjectIR?
