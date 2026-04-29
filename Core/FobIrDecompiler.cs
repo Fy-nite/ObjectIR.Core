@@ -1,7 +1,7 @@
 using System.Text;
 using ObjectIR.Core.AST;
 
-namespace ObjectIR.FobCompiler;
+namespace ObjectIR.Core.Core;
 
 /// <summary>
 /// Provides human-readable output from a FOB/IR v3 binary for diagnostic purposes.

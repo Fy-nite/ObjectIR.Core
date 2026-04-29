@@ -2,6 +2,15 @@
 
 This page describes the core data model in the `ObjectIR.Core.IR` namespace.
 
+## Note
+
+---
+This documentation is out of date. 
+all of the modules and module references have migrated to ObjectIR.Core.AST instead.
+please use that namespace for future programs using ObjectIR.Core
+TODO: modify this to support ObjectIR.Core.AST
+---
+
 ---
 
 ## Module

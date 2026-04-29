@@ -1,4 +1,4 @@
-namespace ObjectIR.Core.IR;
+namespace ObjectIR.Core.Core;
 
 /// <summary>
 /// OpCodes for all instructions

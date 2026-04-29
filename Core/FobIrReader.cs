@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace ObjectIR.FobCompiler;
+namespace ObjectIR.Core.Core;
 
 /// <summary>
 /// Reads a FOB/IR v3 binary into a <see cref="FobIrBinary"/>.

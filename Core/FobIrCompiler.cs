@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using ObjectIR.Core.AST;
 
-namespace ObjectIR.FobCompiler;
+namespace ObjectIR.Core.Core;
 
 /// <summary>
 /// Compiles a pre-lowered module into a FOB/IR v3 binary.
@@ -178,7 +178,7 @@ public sealed class FobIrCompiler
 	}
 
 	private static void CollectFromInstruction(
-		ObjectIR.Core.AST.Instruction instruction,
+		Instruction instruction,
 		HashSet<string> definedTypes,
 		HashSet<string> includes)
 	{
