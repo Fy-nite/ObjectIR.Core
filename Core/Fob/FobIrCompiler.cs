@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using ObjectIR.Core.AST;
 
-namespace ObjectIR.Core.Core;
+namespace ObjectIR.Core.Fob;
 
 /// <summary>
 /// Compiles a pre-lowered module into a FOB/IR v3 binary.

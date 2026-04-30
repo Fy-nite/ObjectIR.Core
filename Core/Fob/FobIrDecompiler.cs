@@ -1,7 +1,7 @@
 using System.Text;
 using ObjectIR.Core.AST;
 
-namespace ObjectIR.Core.Core;
+namespace ObjectIR.Core.Fob;
 
 /// <summary>
 /// Provides human-readable output from a FOB/IR v3 binary for diagnostic purposes.
@@ -63,8 +63,6 @@ foreach (var inc in binary.Includes)
 sb.AppendLine($"//   {inc}");
 }
 
-sb.AppendLine($"//");
-sb.AppendLine($"// Use 'lattice run <file.fobir>' to execute.");
 return sb.ToString();
 }
 }

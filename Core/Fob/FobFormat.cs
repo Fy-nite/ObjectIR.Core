@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace ObjectIR.Core.Core;
+namespace ObjectIR.Core.Fob;
 
 /// <summary>
 /// FOB/IR format versions.

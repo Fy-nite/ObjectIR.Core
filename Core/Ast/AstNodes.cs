@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
-using ObjectIR.Core;
+using ObjectIR.Core.Ast;
 
 namespace ObjectIR.Core.AST;
 
