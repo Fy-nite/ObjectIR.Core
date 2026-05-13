@@ -328,25 +328,50 @@ public sealed class InstructionBuilder
         _statements = statements;
     }
 
+    private SourceLocation? _currentLocation;
+
+    public InstructionBuilder SetLocation(int line, int column, string? sourceLine = null)
+    {
+        _currentLocation = new SourceLocation(line, column, sourceLine);
+        return this;
+    }
+
+    public InstructionBuilder ClearLocation()
+    {
+        _currentLocation = null;
+        return this;
+    }
+
     private InstructionBuilder Emit(string opCode, string? operand = null)
     {
-        _statements.Add(new InstructionStatement(new SimpleInstruction(opCode, operand)));
+        var instruction = new SimpleInstruction(opCode, operand) { Location = _currentLocation };
+        _statements.Add(new InstructionStatement(instruction) { Location = _currentLocation });
         return this;
     }
 
     // Load/Store
     public InstructionBuilder Ldarg(int index) => Emit("ldarg", index.ToString());
+    public InstructionBuilder Starg(int index) => Emit("starg", index.ToString());
     public InstructionBuilder Ldloc(string name) => Emit("ldloc", name);
+    public InstructionBuilder Stloc(string name) => Emit("stloc", name);
+    
+    public InstructionBuilder Local(string name, TypeRef type)
+    {
+        _methodBuilder.Local(name, type);
+        return this;
+    }
     
     public InstructionBuilder Ldfld(FieldReference field)
     {
-        _statements.Add(new InstructionStatement(new SimpleInstruction("ldfld", $"{field.DeclaringType.Name}::{field.Name}")));
+        var instr = new SimpleInstruction("ldfld", $"{field.DeclaringType.Name}::{field.Name}") { Location = _currentLocation };
+        _statements.Add(new InstructionStatement(instr) { Location = _currentLocation });
         return this;
     }
 
     public InstructionBuilder Ldsfld(FieldReference field)
     {
-        _statements.Add(new InstructionStatement(new SimpleInstruction("ldsfld", $"{field.DeclaringType.Name}::{field.Name}")));
+        var instr = new SimpleInstruction("ldsfld", $"{field.DeclaringType.Name}::{field.Name}") { Location = _currentLocation };
+        _statements.Add(new InstructionStatement(instr) { Location = _currentLocation });
         return this;
     }
 
@@ -355,11 +380,10 @@ public sealed class InstructionBuilder
     public InstructionBuilder Ldstr(string value) => Emit("ldstr", value);
     public InstructionBuilder Ldnull() => Emit("ldnull");
 
-    public InstructionBuilder Stloc(string name) => Emit("stloc", name);
-    
     public InstructionBuilder Stfld(FieldReference field)
     {
-        _statements.Add(new InstructionStatement(new SimpleInstruction("stfld", $"{field.DeclaringType.Name}::{field.Name}")));
+        var instr = new SimpleInstruction("stfld", $"{field.DeclaringType.Name}::{field.Name}") { Location = _currentLocation };
+        _statements.Add(new InstructionStatement(instr) { Location = _currentLocation });
         return this;
     }
 
@@ -368,41 +392,47 @@ public sealed class InstructionBuilder
     public InstructionBuilder Sub() => Emit("sub");
     public InstructionBuilder Mul() => Emit("mul");
     public InstructionBuilder Div() => Emit("div");
+    public InstructionBuilder Rem() => Emit("rem");
+    public InstructionBuilder Neg() => Emit("neg");
+
+    // Logical
+    public InstructionBuilder And() => Emit("and");
+    public InstructionBuilder Or() => Emit("or");
+    public InstructionBuilder Xor() => Emit("xor");
+    public InstructionBuilder Not() => Emit("not");
 
     // Comparison
     public InstructionBuilder Ceq() => Emit("ceq");
     public InstructionBuilder Cgt() => Emit("cgt");
     public InstructionBuilder Clt() => Emit("clt");
+    
+    public InstructionBuilder Cne() => Ceq().Not();
+    public InstructionBuilder Cge() => Clt().Not();
+    public InstructionBuilder Cle() => Cgt().Not();
 
     // Calls
     public InstructionBuilder Call(MethodReference method) 
     {
-        _statements.Add(new InstructionStatement(new CallInstruction(
-            method,
-            new List<TypeRef>(),
-            false
-        )));
+        var instr = new CallInstruction(method, new List<TypeRef>(), false) { Location = _currentLocation };
+        _statements.Add(new InstructionStatement(instr) { Location = _currentLocation });
         return this;
     }
 
     public InstructionBuilder Callvirt(MethodReference method)
     {
-        _statements.Add(new InstructionStatement(new CallInstruction(
-            method,
-            new List<TypeRef>(),
-            true
-        )));
+        var instr = new CallInstruction(method, new List<TypeRef>(), true) { Location = _currentLocation };
+        _statements.Add(new InstructionStatement(instr) { Location = _currentLocation });
         return this;
     }
 
     // Object operations
+    public InstructionBuilder Ldelem() => Emit("ldelem");
+    public InstructionBuilder Stelem() => Emit("stelem");
+
     public InstructionBuilder Newobj(TypeRef type, MethodReference? constructor = null)
     {
-        _statements.Add(new InstructionStatement(new NewObjInstruction(
-            type,
-            constructor,
-            new List<TypeRef>()
-        )));
+        var instr = new NewObjInstruction(type, constructor, new List<TypeRef>()) { Location = _currentLocation };
+        _statements.Add(new InstructionStatement(instr) { Location = _currentLocation });
         return this;
     }
 
@@ -416,25 +446,30 @@ public sealed class InstructionBuilder
     public InstructionBuilder If(string condition, Action<InstructionBuilder> thenBlock, Action<InstructionBuilder>? elseBlock = null)
     {
         var thenStatements = new List<Statement>();
-        thenBlock(new InstructionBuilder(_methodBuilder, thenStatements));
+        var thenBuilder = new InstructionBuilder(_methodBuilder, thenStatements) { _currentLocation = _currentLocation };
+        thenBlock(thenBuilder);
         
         BlockStatement? elseStmt = null;
         if (elseBlock != null)
         {
             var elseStatements = new List<Statement>();
-            elseBlock(new InstructionBuilder(_methodBuilder, elseStatements));
-            elseStmt = new BlockStatement(elseStatements);
+            var elseBuilder = new InstructionBuilder(_methodBuilder, elseStatements) { _currentLocation = _currentLocation };
+            elseBlock(elseBuilder);
+            elseStmt = new BlockStatement(elseStatements) { Location = _currentLocation };
         }
 
-        _statements.Add(new IfStatement(condition, new BlockStatement(thenStatements), elseStmt));
+        var ifStmt = new IfStatement(condition, new BlockStatement(thenStatements) { Location = _currentLocation }, elseStmt) { Location = _currentLocation };
+        _statements.Add(ifStmt);
         return this;
     }
 
     public InstructionBuilder While(string condition, Action<InstructionBuilder> body)
     {
         var bodyStatements = new List<Statement>();
-        body(new InstructionBuilder(_methodBuilder, bodyStatements));
-        _statements.Add(new WhileStatement(condition, new BlockStatement(bodyStatements)));
+        var bodyBuilder = new InstructionBuilder(_methodBuilder, bodyStatements) { _currentLocation = _currentLocation };
+        body(bodyBuilder);
+        var whileStmt = new WhileStatement(condition, new BlockStatement(bodyStatements) { Location = _currentLocation }) { Location = _currentLocation };
+        _statements.Add(whileStmt);
         return this;
     }
 

@@ -4,7 +4,12 @@ using ObjectIR.Core.Ast;
 
 namespace ObjectIR.Core.AST;
 
-public abstract record AstNode;
+public sealed record SourceLocation(int Line, int Column, string? SourceLine = null);
+
+public abstract record AstNode
+{
+    public SourceLocation? Location { get; set; }
+}
 
 public sealed record ModuleNode(string Name) : AstNode
 {

@@ -196,6 +196,11 @@ public sealed class ModuleSerializer
         {
             var stmt = block.Statements[i];
             
+            if (stmt.Location != null)
+            {
+                sb.AppendLine($"{ind}// #line {stmt.Location.Line}:{stmt.Location.Column}{(stmt.Location.SourceLine != null ? $" \"{stmt.Location.SourceLine.Trim()}\"" : "")}");
+            }
+
             if (stmt is InstructionStatement instStmt)
             {
                 // Look ahead for while pattern
