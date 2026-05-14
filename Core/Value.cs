@@ -1,10 +1,15 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 namespace ObjectIR.Core
 {
+    public interface IValue
+    {
+        object? GetObjectData();
+    }
+
     /// <summary>
     /// Represents a generic container that encapsulates a single value of the specified type.
     /// </summary>
@@ -12,7 +17,7 @@ namespace ObjectIR.Core
     /// scenarios such as generic data handling, value transformation, or API responses. The class provides methods for
     /// equality comparison and string conversion based on the underlying value.</remarks>
     /// <typeparam name="T">The type of the value to be encapsulated.</typeparam>
-    public class Value<T> 
+    public class Value<T> : IValue
     {
         public T Data { get; set; }
         /// <summary>
@@ -23,6 +28,9 @@ namespace ObjectIR.Core
         {
             Data = data;
         }
+
+        public object? GetObjectData() => Data;
+
         /// <summary>
         /// Converts the data contained in the specified value to its string representation.
         /// </summary>
