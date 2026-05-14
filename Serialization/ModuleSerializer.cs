@@ -241,6 +241,17 @@ public sealed class ModuleSerializer
                 DumpBlockAsIRCode(sb, whileStmt.Body, indentLevel + 1);
                 sb.AppendLine($"{ind}}}");
             }
+            else if (stmt is SwitchStatement switchStmt)
+            {
+                sb.AppendLine($"{ind}switch ({switchStmt.Expression}) {{");
+                foreach (var swCase in switchStmt.Cases)
+                {
+                    var caseVal = swCase.Value?.ToString() ?? "else";
+                    sb.AppendLine($"{ind}    case {caseVal}:");
+                    DumpBlockAsIRCode(sb, swCase.Body, indentLevel + 2);
+                }
+                sb.AppendLine($"{ind}}}");
+            }
         }
     }
 

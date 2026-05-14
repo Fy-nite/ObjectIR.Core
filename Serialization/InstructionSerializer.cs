@@ -69,6 +69,19 @@ public sealed class InstructionSerializer
                     body = ws.Body.Statements.Select(CreateStatementData).ToList()
                 }
             },
+            SwitchStatement sw => new InstructionData
+            {
+                OpCode = "switch",
+                Operand = new
+                {
+                    expression = sw.Expression,
+                    cases = sw.Cases.Select(c => new
+                    {
+                        value = c.Value,
+                        body = c.Body.Statements.Select(CreateStatementData).ToList()
+                    }).ToList()
+                }
+            },
             _ => throw new NotSupportedException($"Statement type {statement.GetType().Name} not supported")
         };
     }
@@ -146,8 +159,25 @@ public sealed class InstructionSerializer
             "local" => new LocalDeclarationStatement(operand.GetProperty("name").GetString()!, new TypeRef(operand.GetProperty("type").GetString()!)),
             "if" => DeserializeIf(operand),
             "while" => DeserializeWhile(operand),
+            "switch" => DeserializeSwitch(operand),
             _ => new InstructionStatement(DeserializeInstruction(opCode, operand))
         };
+    }
+
+    private static SwitchStatement DeserializeSwitch(JsonElement operand)
+    {
+        var expr = operand.GetProperty("expression").GetString()!;
+        var cases = new List<SwitchCase>();
+        foreach (var c in operand.GetProperty("cases").EnumerateArray())
+        {
+            int? val = null;
+            if (c.TryGetProperty("value", out var vp) && vp.ValueKind == JsonValueKind.Number)
+                val = vp.GetInt32();
+            
+            var body = new BlockStatement(DeserializeInstructions(c.GetProperty("body")));
+            cases.Add(new SwitchCase(val, body));
+        }
+        return new SwitchStatement(expr, cases);
     }
 
     private static Instruction DeserializeInstruction(string opCode, JsonElement operand)

@@ -200,6 +200,16 @@ public sealed record WhileStatement(
     BlockStatement Body
 ) : Statement;
 
+public sealed record SwitchCase(
+    int? Value,
+    BlockStatement Body
+) : AstNode;
+
+public sealed record SwitchStatement(
+    string Expression,
+    List<SwitchCase> Cases
+) : Statement;
+
 public abstract record Instruction : AstNode;
 
 public sealed record SimpleInstruction(

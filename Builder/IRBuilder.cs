@@ -328,7 +328,7 @@ public sealed class InstructionBuilder
         _statements = statements;
     }
 
-    private SourceLocation? _currentLocation;
+    internal SourceLocation? _currentLocation;
 
     public InstructionBuilder SetLocation(int line, int column, string? sourceLine = null)
     {
@@ -473,5 +473,36 @@ public sealed class InstructionBuilder
         return this;
     }
 
+    public InstructionBuilder Switch(string expression, Action<SwitchBuilder> cases)
+    {
+        var switchBuilder = new SwitchBuilder(_methodBuilder, _currentLocation);
+        cases(switchBuilder);
+        var switchStmt = new SwitchStatement(expression, switchBuilder.Cases) { Location = _currentLocation };
+        _statements.Add(switchStmt);
+        return this;
+    }
+
     public MethodBuilder EndBody() => _methodBuilder;
+}
+
+public sealed class SwitchBuilder
+{
+    private readonly MethodBuilder _methodBuilder;
+    private readonly SourceLocation? _location;
+    public List<SwitchCase> Cases { get; } = new();
+
+    internal SwitchBuilder(MethodBuilder methodBuilder, SourceLocation? location)
+    {
+        _methodBuilder = methodBuilder;
+        _location = location;
+    }
+
+    public SwitchBuilder Case(int? value, Action<InstructionBuilder> body)
+    {
+        var bodyStatements = new List<Statement>();
+        var bodyBuilder = new InstructionBuilder(_methodBuilder, bodyStatements) { _currentLocation = _location };
+        body(bodyBuilder);
+        Cases.Add(new SwitchCase(value, new BlockStatement(bodyStatements) { Location = _location }) { Location = _location });
+        return this;
+    }
 }

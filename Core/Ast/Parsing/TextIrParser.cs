@@ -390,11 +390,57 @@ public static class TextIrParser
                 continue;
             }
 
+            if (line.StartsWith("switch ", StringComparison.OrdinalIgnoreCase))
+            {
+                statements.Add(ParseSwitch(reader, line));
+                continue;
+            }
+
             statements.Add(new InstructionStatement(ParseInstruction(line)));
         }
 
         reader.Expect("}");
         return new BlockStatement(statements);
+    }
+
+    private static SwitchStatement ParseSwitch(TokenReader reader, string line)
+    {
+        var expr = ExtractCondition(line, "switch");
+        reader.Expect("{");
+        var cases = new List<SwitchCase>();
+
+        while (!reader.PeekIs("}"))
+        {
+            var caseLine = reader.ReadLine();
+            if (!caseLine.StartsWith("case ", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new TextIrParseException($"Expected case, but found '{caseLine}'.");
+            }
+
+            var parts = caseLine["case ".Length..].Trim();
+            int? val = null;
+            if (parts.Equals("else:", StringComparison.OrdinalIgnoreCase))
+            {
+                val = null;
+            }
+            else if (parts.EndsWith(":", StringComparison.Ordinal))
+            {
+                if (int.TryParse(parts[..^1], out var intVal))
+                    val = intVal;
+                else
+                    throw new TextIrParseException($"Expected integer case value, found '{parts[..^1]}'.");
+            }
+            else
+            {
+                throw new TextIrParseException($"Invalid case format: '{caseLine}'.");
+            }
+
+            var body = ParseBlock(reader);
+            cases.Add(new SwitchCase(val, body));
+        }
+
+        reader.Expect("}");
+        return new SwitchStatement(expr, cases);
     }
 
     private static LocalDeclarationStatement ParseLocal(string line)
