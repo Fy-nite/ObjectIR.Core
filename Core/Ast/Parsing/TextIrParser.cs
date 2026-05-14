@@ -435,8 +435,25 @@ public static class TextIrParser
                 throw new TextIrParseException($"Invalid case format: '{caseLine}'.");
             }
 
-            var body = ParseBlock(reader);
-            cases.Add(new SwitchCase(val, body));
+            // The .oir format seems to have case bodies without braces
+            var bodyStatements = new List<Statement>();
+            while (!reader.PeekIs("}") && !reader.PeekLine().TrimStart().StartsWith("case ", StringComparison.OrdinalIgnoreCase))
+            {
+                var stmtLine = reader.ReadLine();
+                if (string.IsNullOrWhiteSpace(stmtLine)) continue;
+                
+                // Simplified parsing of block contents
+                if (stmtLine.TrimStart().StartsWith("local ", StringComparison.OrdinalIgnoreCase))
+                    bodyStatements.Add(ParseLocal(stmtLine.Trim()));
+                else if (stmtLine.TrimStart().StartsWith("if ", StringComparison.OrdinalIgnoreCase))
+                    bodyStatements.Add(ParseIf(reader, stmtLine.Trim()));
+                else if (stmtLine.TrimStart().StartsWith("while ", StringComparison.OrdinalIgnoreCase))
+                    bodyStatements.Add(ParseWhile(reader, stmtLine.Trim()));
+                else
+                    bodyStatements.Add(new InstructionStatement(ParseInstruction(stmtLine.Trim())));
+            }
+            
+            cases.Add(new SwitchCase(val, new BlockStatement(bodyStatements)));
         }
 
         reader.Expect("}");
@@ -803,6 +820,15 @@ public static class TextIrParser
             {
                 throw new TextIrParseException($"Expected '{token}' but found '{value}'.");
             }
+        }
+
+        public string PeekLine()
+        {
+            if (IsAtEnd)
+            {
+                throw new TextIrParseException("Unexpected end of input.");
+            }
+            return _tokens[_index];
         }
     }
 }
