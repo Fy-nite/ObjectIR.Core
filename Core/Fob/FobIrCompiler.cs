@@ -178,7 +178,7 @@ public sealed class FobIrCompiler
 	}
 
 	private static void CollectFromInstruction(
-		Instruction instruction,
+		AST.Instruction instruction,
 		HashSet<string> definedTypes,
 		HashSet<string> includes)
 	{
