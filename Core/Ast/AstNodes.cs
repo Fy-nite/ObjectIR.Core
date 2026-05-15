@@ -42,6 +42,7 @@ public sealed record StructNode(string Name) : AstNode
 {
     public string? Namespace { get; set; }
     public AccessModifier Access { get; set; } = AccessModifier.Public;
+    public MethodNode? Constructor { get; set; }
     public List<FieldNode> Fields { get; } = new();
 }
 
