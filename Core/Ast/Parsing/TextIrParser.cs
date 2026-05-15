@@ -21,6 +21,7 @@ public static class TextIrParser
 
         var interfaces = new List<InterfaceNode>();
         var classes = new List<ClassNode>();
+        var structs = new List<StructNode>();
 
         while (!reader.IsAtEnd)
         {
@@ -36,10 +37,16 @@ public static class TextIrParser
                 continue;
             }
 
+            if (reader.PeekStartsWith("struct "))
+            {
+                structs.Add(ParseStruct(reader));
+                continue;
+            }
+
             throw new TextIrParseException($"Unexpected token '{reader.Peek()}' at top-level.");
         }
 
-        return new ModuleNode(moduleName, moduleVersion, interfaces, classes);
+        return new ModuleNode(moduleName, moduleVersion, interfaces, classes) { Structs = { structs } };
     }
 
     public static CallInstruction ParseCall(string text)
@@ -80,6 +87,43 @@ public static class TextIrParser
         }
 
         return (name, version);
+    }
+
+    private static StructNode ParseStruct(TokenReader reader)
+    {
+        var line = reader.ReadLine();
+            #if NET47
+            var declaration = line.Substring("struct ".Length).Trim();
+            #else
+            var declaration = line["struct ".Length..].Trim();
+            #endif
+        if (declaration.Length == 0)
+        {
+            throw new TextIrParseException("Struct name is missing.");
+        }
+
+        var name = declaration.Trim();
+
+        reader.Expect("{");
+
+        var fields = new List<FieldNode>();
+
+        while (!reader.PeekIs("}"))
+        {
+            var memberLine = reader.ReadLine();
+            if (IsField(memberLine))
+            {
+                fields.Add(ParseField(memberLine));
+                continue;
+            }
+
+            throw new TextIrParseException($"Unexpected struct member '{memberLine}'.");
+        }
+
+        reader.Expect("}");
+        var node = new StructNode(name);
+        node.Fields.AddRange(fields);
+        return node;
     }
 
     private static InterfaceNode ParseInterface(TokenReader reader)
