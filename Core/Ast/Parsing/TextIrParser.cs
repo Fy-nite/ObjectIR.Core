@@ -46,7 +46,7 @@ public static class TextIrParser
             throw new TextIrParseException($"Unexpected token '{reader.Peek()}' at top-level.");
         }
 
-        return new ModuleNode(moduleName, moduleVersion, interfaces, classes) { Structs = { structs } };
+        return new ModuleNode(moduleName, moduleVersion, interfaces, classes) { Structs =  structs  };
     }
 
     public static CallInstruction ParseCall(string text)
@@ -115,6 +115,11 @@ public static class TextIrParser
             {
                 fields.Add(ParseField(memberLine));
                 continue;
+            }
+            // support for constructors in structs
+            if (IsConstructor(memberLine))
+            {
+                throw new TextIrParseException("Structs cannot contain constructors.");
             }
 
             throw new TextIrParseException($"Unexpected struct member '{memberLine}'.");

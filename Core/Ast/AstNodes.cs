@@ -16,7 +16,7 @@ public sealed record ModuleNode(string Name) : AstNode
     public string? Version { get; set; }
     public List<InterfaceNode> Interfaces { get; } = new();
     public List<ClassNode> Classes { get; } = new();
-    public List<StructNode> Structs { get; } = new();
+    public List<StructNode> Structs { get; set; } = new();
     public List<Attribute>? ModuleAttributes { get; } = new();
     public ModuleNode(string name, string? version, List<InterfaceNode> interfaces, List<ClassNode> classes) : this(name)
     {
@@ -42,7 +42,7 @@ public sealed record StructNode(string Name) : AstNode
 {
     public string? Namespace { get; set; }
     public AccessModifier Access { get; set; } = AccessModifier.Public;
-    public MethodNode? Constructor { get; set; }
+    public List<MethodNode>? Methods { get; set; }
     public List<FieldNode> Fields { get; } = new();
 }
 
