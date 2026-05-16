@@ -46,7 +46,7 @@ public static class TextIrParser
             throw new TextIrParseException($"Unexpected token '{reader.Peek()}' at top-level.");
         }
 
-        return new ModuleNode(moduleName, moduleVersion, interfaces, classes) { Structs =  structs  };
+        return new ModuleNode(moduleName, moduleVersion, interfaces, classes) { Structs = structs  };
     }
 
     public static CallInstruction ParseCall(string text)

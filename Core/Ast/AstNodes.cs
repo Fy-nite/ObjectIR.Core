@@ -15,14 +15,35 @@ public sealed record ModuleNode(string Name) : AstNode
 {
     public string? Version { get; set; }
     public List<InterfaceNode> Interfaces { get; } = new();
-    public List<ClassNode> Classes { get; } = new();
-    public List<StructNode> Structs { get; set; } = new();
-    public List<Attribute>? ModuleAttributes { get; } = new();
+    public List<ClassNode>     Classes { get; } = new();
+    public List<StructNode>    Structs { get; set; } = new();
+    /// <summary>
+    /// ModuleSpace Attributes
+    /// </summary>
+    public List<Attribute>?    ModuleAttributes { get; } = new();
+    /// <summary>
+    /// Constructs a new ModuleNode 
+    /// </summary>
+    /// <param name="name">the name for the module</param>
+    /// <param name="version">The version of the module</param>
+    /// <param name="interfaces">Any interfaces you already have</param>
+    /// <param name="classes">Any classes you already have</param>
     public ModuleNode(string name, string? version, List<InterfaceNode> interfaces, List<ClassNode> classes) : this(name)
     {
         Version = version;
         Interfaces.AddRange(interfaces);
         Classes.AddRange(classes);
+    }
+    /// <summary>
+    /// Creates and attaches a class to the Current Moduleode.
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns></returns>
+    public ClassNode AddClass(string name)
+    {
+        var node = new ClassNode(name);
+        Classes.Add(node);
+        return node;
     }
 }
 

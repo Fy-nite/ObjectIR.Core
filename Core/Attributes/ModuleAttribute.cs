@@ -1,0 +1,23 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ObjectIR.Core.Attributes
+{
+    [System.AttributeUsage(System.AttributeTargets.All, Inherited = false, AllowMultiple = true)]
+    abstract class ModuleAttribute : System.Attribute
+    {
+        public string Name { get; set; }
+        public ModuleAttribute()
+        {
+            this.Name = "DefaultModule";
+        }
+        public ModuleAttribute(string name)
+        {
+            this.Name = name;
+        }
+        
+       }
+}
